@@ -8,18 +8,18 @@ Complete reference for the `JitsiMeeting` component props (`IAppProps`), the imp
 
 ## IAppProps — Component Props
 
-These are the props accepted by the `<JitsiMeeting />` component. Only `room` is required; all other props are optional.
+These are the props accepted by the `<JitsiMeeting />` component. Both `room` and `config` are required; all other props are optional.
 
 <ParamField path="room" type="string" required>
   The conference room to join. Accepts either a plain room name (e.g. `"MyRoom"`) or a fully-qualified URL (e.g. `"https://meet.jit.si/MyRoom"`). When a full URL is provided, the `serverURL` prop is ignored.
 </ParamField>
 
-<ParamField path="serverURL" type="string">
-  The base URL of the Jitsi Meet server to connect to, including the protocol (e.g. `"https://meet.jit.si"`). If omitted, the SDK defaults to the public `meet.jit.si` server. Has no effect when `room` contains a full URL.
+<ParamField path="config" type="object" required>
+  An object of `config.js` overrides applied to the conference at join time. Use this to pre-configure conference behaviour — for example, `{ startWithAudioMuted: true }` or `{ customToolbarButtons: [...] }`. See the [Jitsi Meet config.js documentation](https://jitsi.github.io/handbook/docs/user-guide/user-guide-advanced) for all available keys.
 </ParamField>
 
-<ParamField path="config" type="object">
-  An object of `config.js` overrides applied to the conference at join time. Use this to pre-configure conference behaviour — for example, `{ startWithAudioMuted: true }` or `{ customToolbarButtons: [...] }`. See the [Jitsi Meet config.js documentation](https://jitsi.github.io/handbook/docs/user-guide/user-guide-advanced) for all available keys.
+<ParamField path="serverURL" type="string">
+  The base URL of the Jitsi Meet server to connect to, including the protocol (e.g. `"https://meet.jit.si"`). If omitted, the SDK defaults to the public `meet.jit.si` server. Has no effect when `room` contains a full URL.
 </ParamField>
 
 <ParamField path="flags" type="object">
@@ -102,7 +102,7 @@ All properties of `IEventListeners` are optional functions. Pass only the events
   Fired when the conference screen regains focus after previously being blurred. Pair with `onConferenceBlurred` to manage host-app overlays.
 </ParamField>
 
-<ParamField path="onAudioMutedChanged" type="({ muted: boolean }) => void">
+<ParamField path="onAudioMutedChanged" type="Function">
   Fired whenever the local participant's audio mute state changes — whether triggered programmatically via `setAudioMuted()` or by the user pressing the mute button in the UI.
 
   ```ts
@@ -112,11 +112,11 @@ All properties of `IEventListeners` are optional functions. Pass only the events
   ```
 </ParamField>
 
-<ParamField path="onVideoMutedChanged" type="({ muted: boolean }) => void">
+<ParamField path="onVideoMutedChanged" type="Function">
   Fired whenever the local participant's video mute state changes — whether triggered programmatically via `setVideoMuted()` or by the user pressing the camera button in the UI.
 </ParamField>
 
-<ParamField path="onParticipantJoined" type="({ id: string }) => void">
+<ParamField path="onParticipantJoined" type="Function">
   Fired when a remote participant joins the conference. The `id` field is the participant's unique endpoint ID within the conference session.
 </ParamField>
 

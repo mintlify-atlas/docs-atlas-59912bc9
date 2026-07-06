@@ -1,5 +1,5 @@
 ---
-title: "Quickstart: Embed Jitsi Meet in 5 Minutes"
+title: "Quickstart: Embed Jitsi Meet via IFrame API in Minutes"
 sidebarTitle: "Quickstart"
 description: "Embed a live Jitsi Meet video conference into any web page using the IFrame API — no backend required, just a script tag and minimal JavaScript."
 ---
@@ -75,36 +75,35 @@ The Jitsi Meet IFrame API lets you embed a complete, production-ready video conf
 
   ### Listen to Events
 
-  The `api` object is an `EventEmitter`. Use `addEventListener` to react to meeting lifecycle events:
+  The `api` object is an `EventEmitter`. Use `.on(eventName, listener)` to react to meeting lifecycle events:
 
   ```javascript
   // Fired when the local participant successfully joins the conference
-  api.addEventListener("videoConferenceJoined", (event) => {
+  api.on("videoConferenceJoined", (event) => {
     console.log("Joined room:", event.roomName);
-    console.log("Local participant ID:", event.id);
   });
 
   // Fired when the local participant leaves or the conference ends
-  api.addEventListener("videoConferenceLeft", () => {
-    console.log("Left the conference");
+  api.on("videoConferenceLeft", (event) => {
+    console.log("Left the conference:", event.roomName);
     // e.g. redirect the user or clean up the container
   });
 
   // Fired whenever a remote participant joins
-  api.addEventListener("participantJoined", (event) => {
-    console.log("Participant joined:", event.displayName, event.id);
+  api.on("participantJoined", (event) => {
+    console.log("Participant joined:", event.jid);
   });
 
   // Fired when audio mute state changes
-  api.addEventListener("audioMuteStatusChanged", (event) => {
+  api.on("audioMuteStatusChanged", (event) => {
     console.log("Audio muted:", event.muted);
   });
   ```
 
-  You can listen to as many events as you need. See the [full IFrame API reference](https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-iframe) for the complete list of available events.
+  You can listen to as many events as you need. See the [IFrame API events reference](/iframe-api/events) for the complete list of available events.
 
   <Note>
-    The full IFrame API supports dozens of events, including `participantLeft`, `dominantSpeakerChanged`, `recordingStatusChanged`, `knockingParticipant`, and more. Check the [IFrame API handbook page](https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-iframe) for the authoritative reference.
+    The full IFrame API supports dozens of events, including `participantLeft`, `dominantSpeakerChanged`, `recordingStatusChanged`, `knockingParticipant`, and more. Check the [IFrame API events page](/iframe-api/events) for the authoritative reference.
   </Note>
 
   ### Execute Commands
@@ -203,24 +202,24 @@ const api = new JitsiMeetExternalAPI(domain, options);
 
 // ── Event listeners ──────────────────────────────────────────────────────────
 
-api.addEventListener("videoConferenceJoined", (event) => {
-  console.log("✅ Joined conference:", event.roomName, "as", event.displayName);
+api.on("videoConferenceJoined", (event) => {
+  console.log("✅ Joined conference:", event.roomName);
 });
 
-api.addEventListener("videoConferenceLeft", () => {
+api.on("videoConferenceLeft", (event) => {
   console.log("👋 Left the conference — disposing iframe");
   api.dispose();
 });
 
-api.addEventListener("participantJoined", (event) => {
-  console.log("➕ Participant joined:", event.displayName);
+api.on("participantJoined", (event) => {
+  console.log("➕ Participant joined:", event.jid);
 });
 
-api.addEventListener("participantLeft", (event) => {
-  console.log("➖ Participant left:", event.id);
+api.on("participantLeft", (event) => {
+  console.log("➖ Participant left:", event.jid);
 });
 
-api.addEventListener("audioMuteStatusChanged", (event) => {
+api.on("audioMuteStatusChanged", (event) => {
   console.log("🎤 Muted:", event.muted);
 });
 
@@ -241,7 +240,7 @@ function hangup() {
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="IFrame API Reference" icon="book-open" href="https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-iframe">
+  <Card title="IFrame API Reference" icon="book-open" href="/iframe-api/overview">
     Full list of commands, events, and getters available on the `JitsiMeetExternalAPI` object.
   </Card>
   <Card title="Self-Hosting Guide" icon="server" href="/self-hosting">

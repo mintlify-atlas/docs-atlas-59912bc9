@@ -1,7 +1,7 @@
 ---
-title: "Interface Configuration Options for Jitsi Meet"
+title: "interface_config.js: Jitsi Meet UI Configuration Options"
 sidebarTitle: "Interface Config"
-description: "Reference for interface_config.js UI options in Jitsi Meet, including background, filmstrip, language, and branding — plus how to override them via the IFrame API."
+description: "Reference for interface_config.js UI options in Jitsi Meet: background, filmstrip, language, and branding, with IFrame API override examples."
 ---
 
 `interface_config.js` is a legacy configuration file that controls the visual and behavioural aspects of the Jitsi Meet user interface — things like the application name, filmstrip thumbnail height, language detection, and which browsers receive the full experience. On a standard installation it lives alongside `config.js` at `/etc/jitsi/meet/<domain>-interface_config.js`.
@@ -114,8 +114,8 @@ description: "Reference for interface_config.js UI options in Jitsi Meet, includ
   When `true`, Jitsi Meet reads the browser's `Accept-Language` header and automatically selects the closest available UI translation. Set to `false` to always use the default language (`en`).
 </ParamField>
 
-<ParamField path="SETTINGS_SECTIONS" type="array">
-  Controls which sections appear in the Settings panel. Default: `['devices', 'language', 'moderator', 'profile', 'calendar', 'shortcuts', 'sounds', 'more']`. Remove entries to hide those settings panels from users.
+<ParamField path="SETTINGS_SECTIONS" type="array" default='["devices","language","moderator","profile","calendar","shortcuts","sounds","more"]'>
+  Controls which sections appear in the Settings panel. Remove entries to hide those settings panels from users.
 </ParamField>
 
 ---
@@ -173,12 +173,14 @@ For deployments where Jitsi Meet is embedded with the IFrame API, you can overri
       FILM_STRIP_MAX_HEIGHT: 80,
       GENERATE_ROOMNAMES_ON_WELCOME_PAGE: false,
       MOBILE_APP_PROMO: false,
-      TOOLBAR_ALWAYS_VISIBLE: false,
     },
 
     // You can also override config.js values the same way
     configOverwrite: {
       startWithAudioMuted: true,
+      toolbarConfig: {
+        alwaysVisible: false,
+      },
     },
   });
 </script>

@@ -1,7 +1,7 @@
 ---
-title: "Jitsi Meet config.js Reference Guide"
+title: "Jitsi Meet config.js: Complete Configuration Reference"
 sidebarTitle: "config.js"
-description: "Complete reference for Jitsi Meet's config.js — covering connection, P2P, video quality, toolbar, prejoin, and feature flag settings for self-hosted deployments."
+description: "Complete reference for Jitsi Meet config.js — connection, P2P, video quality, toolbar, prejoin, and feature flag settings for self-hosted deployments."
 ---
 
 `config.js` is the primary server-side configuration file loaded by every Jitsi Meet instance on page load. On a standard Debian/Ubuntu installation it lives at `/etc/jitsi/meet/<your-domain>-config.js`. The file exports a single `config` object whose properties control everything from XMPP connection details and codec preferences to which toolbar buttons appear in the UI. Changes take effect immediately on the next page load — no server restart is required.
@@ -98,7 +98,7 @@ The `toolbarButtons` array controls exactly which buttons appear in the meeting 
 </ParamField>
 
 <Tip>
-  Reorder the buttons in the main toolbar by changing the order of entries inside `toolbarButtons`. The `'desktop'` key controls the "Share your screen" button.
+  The `'desktop'` key controls the "Share your screen" button. Use `mainToolbarButtons` to customise the layout of buttons in the main toolbar by screen size.
 </Tip>
 
 ```js
@@ -128,7 +128,7 @@ toolbarButtons: [
     </ParamField>
 
     <ParamField path="videoQuality.mobileCodecPreferenceOrder" type="array">
-      Ordered list of preferred codecs for mobile and React Native endpoints. Example: `['VP8', 'VP9', 'H264', 'AV1']`.
+      Ordered list of preferred codecs for mobile and React Native endpoints. Example: `['H264', 'VP8', 'VP9', 'AV1']`.
     </ParamField>
 
     <ParamField path="videoQuality.enableAdaptiveMode" type="boolean" default="false">
@@ -193,8 +193,8 @@ toolbarButtons: [
   When `true`, no requests are made to external servers. Avatars fall back to locally-generated identicons and external analytics/stats integrations are disabled. Useful for air-gapped or privacy-strict deployments.
 </ParamField>
 
-<ParamField path="disableReactions" type="boolean" default="false">
-  Disables the emoji reactions feature for all participants.
+<ParamField path="disableReactions" type="boolean">
+  When set to `true`, disables the emoji reactions feature for all participants. Reactions are enabled by default when this option is not set.
 </ParamField>
 
 <ParamField path="disablePolls" type="boolean" default="false">

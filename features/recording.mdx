@@ -1,7 +1,7 @@
 ---
-title: "Recording Meetings in Jitsi Meet"
+title: "Record Jitsi Meetings Locally, via Jibri, or Dropbox"
 sidebarTitle: "Recording"
-description: "Record Jitsi meetings locally in the browser or server-side via Jibri, with support for Dropbox, file storage, and live RTMP streaming."
+description: "Record Jitsi meetings locally in the browser or server-side via Jibri, with Dropbox upload, file storage, and live RTMP streaming support."
 ---
 
 Jitsi Meet supports two distinct recording approaches: **local recording**, which captures your meeting directly in the browser without any server infrastructure, and **server-side recording** powered by Jibri, which handles file storage and live RTMP streaming. Recordings can be saved to a local file, uploaded to Dropbox, or streamed to platforms like YouTube Live. The method you choose depends on your deployment capabilities and your participants' needs.
@@ -123,7 +123,7 @@ api.executeCommand('stopRecording', 'file');
 
 ## Recording Events
 
-Subscribe to `recording-status-changed` to react to recording state transitions in your embedding application.
+Subscribe to `recordingStatusChanged` to react to recording state transitions in your embedding application.
 
 ```js
 api.addListener('recordingStatusChanged', ({ on, mode, error, transcription }) => {

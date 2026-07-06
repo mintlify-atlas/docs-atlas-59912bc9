@@ -1,5 +1,5 @@
 ---
-title: "Installing the Jitsi React Native SDK"
+title: "React Native SDK Installation Guide for Jitsi Meet"
 sidebarTitle: "Installation"
 description: "Step-by-step guide to installing @jitsi/react-native-sdk, running the dependency helper, and configuring iOS and Android native build settings."
 ---
@@ -12,7 +12,7 @@ Add `@jitsi/react-native-sdk` to your project using your preferred package manag
 
 <CodeGroup>
 ```bash npm
-npm install @jitsi/react-native-sdk
+npm i @jitsi/react-native-sdk
 ```
 
 ```bash yarn
@@ -25,7 +25,7 @@ pnpm add @jitsi/react-native-sdk
 </CodeGroup>
 
 <Note>
-  If you encounter peer dependency conflicts, add `--legacy-peer-deps` (npm) or `--force` (npm/yarn) to resolve them. For example: `npm install @jitsi/react-native-sdk --legacy-peer-deps`.
+  If you encounter peer dependency conflicts, you can use `--force` to resolve them. For example: `npm i @jitsi/react-native-sdk --force`.
 </Note>
 
 ## Run the Dependency Helper
@@ -51,7 +51,10 @@ const { getDefaultConfig } = require('metro-config');
 
 module.exports = (async () => {
   const {
-    resolver: { sourceExts, assetExts }
+    resolver: {
+      sourceExts,
+      assetExts
+    }
   } = await getDefaultConfig();
 
   return {
@@ -68,7 +71,7 @@ module.exports = (async () => {
       assetExts: assetExts.filter(ext => ext !== 'svg'),
       sourceExts: [...sourceExts, 'svg']
     }
-  };
+  }
 })();
 ```
 
@@ -126,8 +129,6 @@ module.exports = (async () => {
     ```xml AndroidManifest.xml
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     ```
   </Step>
   <Step title="Configure screen sharing (optional)">

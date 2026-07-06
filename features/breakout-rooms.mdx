@@ -45,8 +45,8 @@ api.executeCommand('autoAssignToBreakoutRooms');
 // Move a specific remote participant to a room (moderator only)
 api.executeCommand('sendParticipantToRoom', participantId, roomId);
 
-// Move the local participant to a specific room
-api.executeCommand('moveToRoom', roomId);
+// Move the local participant to a specific breakout room
+api.executeCommand('joinBreakoutRoom', roomId);
 
 // Close a specific breakout room and return its participants to the main room
 api.executeCommand('closeBreakoutRoom', roomId);
@@ -58,7 +58,7 @@ api.executeCommand('closeBreakoutRoom', roomId);
 | `removeBreakoutRoom` | `breakoutRoomJid: string` | Permanently removes the specified room |
 | `autoAssignToBreakoutRooms` | — | Evenly distributes all participants across existing rooms |
 | `sendParticipantToRoom` | `participantId, roomId` | Moves a remote participant to the target room |
-| `moveToRoom` | `roomId` | Moves the local participant to the target room |
+| `joinBreakoutRoom` | `roomId` | Moves the local participant to the target breakout room |
 | `closeBreakoutRoom` | `roomId` | Closes a room and returns its members to the main conference |
 
 ## Breakout Room Events
@@ -78,7 +78,7 @@ The event fires whenever a room is created, removed, or whenever participants mo
 
 ## Retrieving Current Room State
 
-Use `getRoomsInfo()` to synchronously fetch a snapshot of all rooms and their current participants — useful for building a custom rooms UI or tracking occupancy.
+Use `getRoomsInfo()` to fetch a snapshot of all rooms and their current participants — useful for building a custom rooms UI or tracking occupancy.
 
 ```js
 api.getRoomsInfo().then(({ rooms }) => {

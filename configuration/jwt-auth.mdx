@@ -1,5 +1,5 @@
 ---
-title: "Securing Jitsi Meet Rooms with JWT Tokens"
+title: "JWT Authentication for Jitsi Meet: Setup and Token Guide"
 sidebarTitle: "JWT Auth"
 description: "How to configure JSON Web Token authentication in Jitsi Meet to control room access, set user identity, and grant moderator privileges via signed tokens."
 ---
@@ -86,15 +86,19 @@ JWTs are Base64URL-encoded JSON. The payload section must contain the following 
 </ParamField>
 
 <ParamField path="context.user.avatar" type="string">
-  Direct URL to the user's profile picture. Overrides email-based avatar lookups.
+  Direct URL to the user's profile picture. Overrides email-based avatar lookups. Also accepted as `avatarUrl`.
+</ParamField>
+
+<ParamField path="context.user.id" type="string">
+  An opaque identifier for the user from your system. Used to correlate participants across sessions.
 </ParamField>
 
 <ParamField path="context.user.moderator" type="string">
-  When set to `"true"`, the user is granted moderator privileges (mute others, remove participants, end meeting for all).
+  When set to `"true"`, Prosody grants this user moderator privileges (mute others, remove participants, end meeting for all). This field is processed server-side by Prosody and is not parsed by the Jitsi client.
 </ParamField>
 
 <ParamField path="context.features" type="object">
-  Per-user feature gate flags. All values are strings `"true"` or `"false"`. Supported keys include: `recording`, `livestreaming`, `screen-sharing`, `lobby`, `moderation`, `transcription`, `create-polls`, `send-groupchat`, `outbound-call`, `inbound-call`, `sip-outbound-call`, `sip-inbound-call`, `flip`, `file-upload`, `live-translation`.
+  Per-user feature gate flags. Values must be the string `"true"` or `"false"` (or booleans). Supported keys are defined by the `MEET_FEATURES` constants in the Jitsi codebase: `recording`, `livestreaming`, `screen-sharing`, `lobby`, `moderation`, `transcription`, `create-polls`, `send-groupchat`, `outbound-call`, `inbound-call`, `sip-outbound-call`, `sip-inbound-call`, `flip`, `file-upload`, `live-translation`, `branding`, `calendar`, `room`, `list-visitors`.
 </ParamField>
 
 <Warning>
@@ -144,7 +148,7 @@ On the Jitsi side, enable the `tokenAuthUrl` redirect flow if you want unauthent
 ```js
 // config.js
 tokenAuthUrl:
-  'https://auth.example.com/login?room={room}&challenge={code_challenge}&state={state}',
+  'https://auth.example.com/auth/{room}?code_challenge_method=S256&code_challenge={code_challenge}&state={state}',
 
 // Optional: redirect to a logout endpoint when the user leaves
 // tokenLogoutUrl: 'https://auth.example.com/logout',
@@ -157,19 +161,23 @@ hosts: {
 },
 ```
 
+<Note>
+  The `tokenAuthUrl` supports the following template parameters: `{room}` (room name), `{code_challenge}` (OAuth 2.0 PKCE challenge), and `{state}` (a JSON object with the current navigation state). The code verifier is saved to `sessionStorage` under the key `code_verifier`.
+</Note>
+
 ---
 
 ## Pass JWT via URL
 
 Append the token as a query parameter when linking directly to a room:
 
-```
+```text
 https://meet.example.com/MyMeetingRoom?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 The client-side parser (`parseJWTFromURLParams`) checks both the URL query string and the hash fragment, so the following also works:
 
-```
+```text
 https://meet.example.com/MyMeetingRoom#jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
@@ -207,7 +215,7 @@ When embedding Jitsi Meet with the IFrame API, supply the token in the construct
 
 ## Feature Flags via JWT
 
-The `context.features` object in the payload maps directly to the `MEET_FEATURES` constants in the Jitsi codebase. Each flag is a string (`"true"` / `"false"`) because the JWT payload is a plain JSON object. Some commonly used feature flags:
+The `context.features` object in the payload maps directly to the `MEET_FEATURES` constants in the Jitsi codebase. Each flag value must be `"true"`, `"false"`, `true`, or `false` — any other value is treated as invalid by the client-side validator. Some commonly used feature flags:
 
 | Feature key | Effect when `"true"` |
 |---|---|
@@ -219,11 +227,14 @@ The `context.features` object in the payload maps directly to the `MEET_FEATURES
 | `transcription` | User can request live captions |
 | `create-polls` | User can create polls in the meeting |
 | `send-groupchat` | User can send messages in group chat |
+| `outbound-call` | User can make outbound calls |
+| `sip-outbound-call` | User can make SIP outbound calls |
+| `live-translation` | User can use live translation |
 
 ---
 
 ## JaaS (Jitsi as a Service) Tokens
 
 <Note>
-  If you are using **JaaS (8x8 Jitsi as a Service)**, token generation is different. The `sub` claim must contain your JaaS App ID (in `vpaas-magic-cookie-*` format), and tokens must be signed with the private key downloaded from your JaaS dashboard. See the [JaaS API Keys guide](/jaas/api-keys) for full instructions.
+  If you are using **JaaS (8x8 Jitsi as a Service)**, token generation is different. The `sub` claim must contain your JaaS App ID (in `vpaas-magic-cookie-*` format), the `iss` claim must be `"chat"`, and tokens must be signed with the private key downloaded from your JaaS dashboard. See the [JaaS API Keys guide](/jaas/api-keys) for full instructions.
 </Note>

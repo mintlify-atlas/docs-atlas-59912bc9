@@ -86,6 +86,18 @@ const api = new JitsiMeetExternalAPI(domain, options);
   A hex-encoded key used to enable End-to-End Encryption from the moment the participant joins. This option is experimental and may be removed in a future release.
 </ParamField>
 
+<ParamField path="options.iceServers" type="object">
+  An object with rules to modify or remove the default ICE server configuration used for WebRTC peer connections. This property is experimental and may be removed in a future release.
+</ParamField>
+
+<ParamField path="options.release" type="string">
+  A release tag used to target a specific backend release when release-based routing is enabled on the server.
+</ParamField>
+
+<ParamField path="options.sandbox" type="string">
+  A sandbox directive string applied to the created iframe element. Use this to restrict iframe capabilities, for example `'allow-scripts allow-same-origin'`. Omit this option unless you have a specific sandboxing requirement, as overly restrictive values will break the meeting UI.
+</ParamField>
+
 ## Complete Initialization Example
 
 The example below shows a comprehensive setup with config overrides, pre-filled user info, a JWT, and event listeners attached immediately after construction.

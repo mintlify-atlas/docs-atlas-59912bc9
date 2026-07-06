@@ -1,5 +1,5 @@
 ---
-title: "JaaS API Keys and JWT Token Generation"
+title: "JaaS API Keys and JWT Token Signing for Jitsi Meetings"
 sidebarTitle: "API Keys"
 description: "Learn how to generate JaaS RS256 API key pairs, structure JWT payloads, and sign tokens server-side to authenticate Jitsi Meet meetings on JaaS."
 ---
@@ -19,7 +19,7 @@ JaaS uses RS256 JWT tokens signed with your private API key to authenticate meet
     Download the private key (`.pk` file) from the confirmation dialog immediately — JaaS does **not** retain a copy. Store it in a secrets manager or a vault, never in source control. Transfer it securely to the server that will sign tokens.
   </Step>
   <Step title="Record the Key ID">
-    Note the **Key ID** displayed next to your new key in the console. You will embed this value in the `kid` header field of every JWT token you sign with that key.
+    Note the **Key ID** displayed next to your new key in the console. The Key ID takes the form `vpaas-magic-cookie-<app-id>/<key-uuid>`. You will embed this full value in the `kid` header field of every JWT token you sign with that key. The portion before the `/` is your **App ID** (`vpaas-magic-cookie-<app-id>`), which also goes in the `sub` claim of the JWT payload.
   </Step>
 </Steps>
 
@@ -31,7 +31,7 @@ A JaaS JWT payload carries your App ID in the `sub` claim, the target room in `r
 {
   "iss": "chat",
   "aud": "jitsi",
-  "sub": "<your-app-id>.8x8.vc",
+  "sub": "vpaas-magic-cookie-<your-app-id>",
   "exp": 1700000000,
   "nbf": 1699999000,
   "room": "*",
@@ -57,7 +57,7 @@ A JaaS JWT payload carries your App ID in the `sub` claim, the target room in `r
 |---|---|
 | `iss` | Always `"chat"` for JaaS tokens. |
 | `aud` | Always `"jitsi"` for JaaS tokens. |
-| `sub` | Your full JaaS domain: `<app-id>.8x8.vc`. |
+| `sub` | Your full JaaS App ID, e.g. `vpaas-magic-cookie-<id>`. |
 | `exp` | Unix timestamp after which the token is invalid. |
 | `nbf` | Unix timestamp before which the token is not yet valid. |
 | `room` | Specific room name or `"*"` for any room under your App ID. |
@@ -77,7 +77,7 @@ const privateKey = fs.readFileSync('./jaas-private-key.pk');
 const payload = {
   iss: 'chat',
   aud: 'jitsi',
-  sub: 'vpaas-magic-cookie-<your-app-id>.8x8.vc',
+  sub: 'vpaas-magic-cookie-<your-app-id>',
   exp: Math.floor(Date.now() / 1000) + 3600,  // 1 hour from now
   nbf: Math.floor(Date.now() / 1000) - 10,    // valid 10s ago (clock skew buffer)
   room: '*',

@@ -1,7 +1,7 @@
 ---
-title: "End-to-End Encryption in Jitsi Meet"
+title: "End-to-End Encryption (E2EE) for Jitsi Meet Meetings"
 sidebarTitle: "E2EE"
-description: "Enable End-to-End Encryption in Jitsi Meet using WebRTC Insertable Streams so media is encrypted on-device and never readable by servers."
+description: "Enable End-to-End Encryption in Jitsi Meet using WebRTC Insertable Streams so media is encrypted on-device and never readable by the server."
 ---
 
 Jitsi Meet supports optional End-to-End Encryption (E2EE) using the WebRTC Insertable Streams API. When E2EE is enabled, media is encrypted directly on the sender's device before it enters the WebRTC pipeline, and it is decrypted only on each recipient's device. The Jitsi server infrastructure relays encrypted packets but cannot read their contents — the server sees only ciphertext.
@@ -56,18 +56,26 @@ The source defines automatic mode thresholds:
 
 For deployments where key management must be handled outside of Jitsi (e.g., a custom KMS or a pre-shared key scheme), use the `setMediaEncryptionKey` command to inject a specific key rather than relying on Jitsi's built-in key exchange.
 
+Pass a `keyInfo` object containing a `key` (`CryptoKey`) and an optional `index` (key rotation index). The API handles exporting and serializing the key internally:
+
 ```js
-// Supply a custom encryption key as a JSON-serialised key info object
-const keyInfo = JSON.stringify({
-  aesGcmKeyParams: {
-    name: 'AES-GCM',
-    length: 256
-  },
-  // The exported key material (base64-encoded or a CryptoKey)
-  exportedKey: '<your-base64-encoded-key>'
+const api = new JitsiMeetExternalAPI(domain, options);
+
+// Generate an AES-GCM key
+const cryptoKey = await crypto.subtle.generateKey(
+  { name: 'AES-GCM', length: 256 },
+  true,
+  ['encrypt', 'decrypt']
+);
+
+// Supply the key — the API exports and serializes it automatically
+await api.setMediaEncryptionKey({
+  key: cryptoKey,
+  index: 0
 });
 
-api.executeCommand('setMediaEncryptionKey', keyInfo);
+// To clear the key (disable encryption), omit the key field
+await api.setMediaEncryptionKey({ index: 0 });
 ```
 
 <Tip>

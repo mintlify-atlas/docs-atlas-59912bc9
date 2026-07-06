@@ -1,5 +1,5 @@
 ---
-title: "Jitsi IFrame API Command Reference"
+title: "Jitsi IFrame API Commands: Full Reference Guide"
 sidebarTitle: "Commands"
 description: "Full reference for all Jitsi IFrame API commands. Control audio, video, recording, participants, breakout rooms, and UI from your host page."
 ---
@@ -93,6 +93,46 @@ api.executeCommand('setAudioOnly', true);
 api.executeCommand('toggleNoiseSuppression');
 ```
 
+---
+
+**`setNoiseSuppressionEnabled(enabled)`** — Explicitly enable or disable noise suppression.
+
+```js
+api.executeCommand('setNoiseSuppressionEnabled', true);
+```
+
+---
+
+**`toggleCamera`** — Switch between the front and back cameras on mobile devices. No arguments.
+
+```js
+api.executeCommand('toggleCamera');
+```
+
+---
+
+**`toggleCameraMirror`** — Mirror or un-mirror the local camera preview. No arguments.
+
+```js
+api.executeCommand('toggleCameraMirror');
+```
+
+---
+
+**`sendCameraFacingMode(mode)`** — Send a camera facing mode message to the conference.
+
+```js
+api.executeCommand('sendCameraFacingMode', 'environment');
+```
+
+---
+
+**`setBlurredBackground(enabled)`** — Enable or disable the blurred background effect.
+
+```js
+api.executeCommand('setBlurredBackground', true);
+```
+
 </Accordion>
 
 <Accordion title="Meeting Controls">
@@ -141,6 +181,14 @@ api.executeCommand('subject', 'Q3 Planning Session');
 
 ---
 
+**`localSubject(subject)`** — Set the meeting subject locally (only visible to the local participant).
+
+```js
+api.executeCommand('localSubject', 'My local title');
+```
+
+---
+
 **`displayName(name)`** — Set the local participant's display name.
 
 ```js
@@ -169,6 +217,38 @@ api.executeCommand('avatarUrl', 'https://example.com/avatar.png');
 
 ```js
 api.executeCommand('sendTones', { tones: '1234#', duration: 200, pause: 200 });
+```
+
+---
+
+**`submitFeedback(score, message)`** — Programmatically submit post-call feedback.
+
+```js
+api.executeCommand('submitFeedback', 4, 'Great call!');
+```
+
+---
+
+**`setFollowMe(enabled)`** — Enable or disable Follow Me mode (moderator view control).
+
+```js
+api.executeCommand('setFollowMe', true);
+```
+
+---
+
+**`setMeetingTimer(seconds)`** — Set a countdown timer visible to all participants.
+
+```js
+api.executeCommand('setMeetingTimer', 300); // 5 minutes
+```
+
+---
+
+**`toggleModeration(enabled, mediaType)`** — Enable or disable AV moderation for the specified media type.
+
+```js
+api.executeCommand('toggleModeration', true, 'audio');
 ```
 
 </Accordion>
@@ -209,18 +289,42 @@ api.executeCommand('stopRecording', 'stream');
 
 ---
 
-**`startLocalVideoRecording`** — Start recording directly in the browser without server involvement. No arguments.
+**`grantRecordingConsent`** — Grant consent for recording on behalf of the local participant. No arguments.
 
 ```js
-api.executeCommand('startLocalVideoRecording');
+api.executeCommand('grantRecordingConsent');
 ```
 
 ---
 
-**`stopLocalVideoRecording`** — Stop the local browser recording and prompt the file download. No arguments.
+**`startShareVideo(url)`** — Share a video URL with all participants in the conference.
 
 ```js
-api.executeCommand('stopLocalVideoRecording');
+api.executeCommand('startShareVideo', 'https://example.com/video.mp4');
+```
+
+---
+
+**`stopShareVideo`** — Stop the shared video. No arguments.
+
+```js
+api.executeCommand('stopShareVideo');
+```
+
+---
+
+**`setSubtitles(enabled, language?)`** — Enable or disable meeting subtitles/captions.
+
+```js
+api.executeCommand('setSubtitles', true, 'en-US');
+```
+
+---
+
+**`toggleSubtitles`** — Toggle meeting subtitles on or off. No arguments.
+
+```js
+api.executeCommand('toggleSubtitles');
 ```
 
 </Accordion>
@@ -247,6 +351,22 @@ api.executeCommand('muteRemoteParticipant', 'participant-jid-here', 'audio');
 
 ```js
 api.executeCommand('grantModerator', 'participant-jid-here');
+```
+
+---
+
+**`rejectParticipant(participantId)`** — Reject a participant from joining. Requires moderator privileges.
+
+```js
+api.executeCommand('rejectParticipant', 'participant-jid-here');
+```
+
+---
+
+**`approveVideo(participantId)`** — Approve a participant's video in a moderated session.
+
+```js
+api.executeCommand('approveVideo', 'participant-jid-here');
 ```
 
 ---
@@ -290,6 +410,18 @@ api.executeCommand('setParticipantVolume', 'participant-jid-here', 0.5);
 
 ```js
 api.executeCommand('askToUnmute', 'participant-jid-here');
+```
+
+---
+
+**`answerKnockingParticipant(participantId, approved)`** — Admit or deny a participant waiting in the lobby.
+
+```js
+// Admit the participant
+api.executeCommand('answerKnockingParticipant', 'participant-jid', true);
+
+// Deny the participant
+api.executeCommand('answerKnockingParticipant', 'participant-jid', false);
 ```
 
 </Accordion>
@@ -386,6 +518,14 @@ api.executeCommand('toggleFilmStrip');
 
 ---
 
+**`resizeFilmStrip(width)`** — Resize the filmstrip to the specified width in pixels.
+
+```js
+api.executeCommand('resizeFilmStrip', 200);
+```
+
+---
+
 **`toggleParticipantsPane`** — Show or hide the participants list panel. No arguments.
 
 ```js
@@ -434,34 +574,50 @@ api.executeCommand('setLargeVideoParticipant', 'participant-jid', 'camera');
 
 ---
 
-**`toggleCamera`** — Switch between the front and back cameras on mobile devices. No arguments.
+**`resizeLargeVideo(width, height)`** — Resize the large video container to the given pixel dimensions.
 
 ```js
-api.executeCommand('toggleCamera');
+api.executeCommand('resizeLargeVideo', 1280, 720);
 ```
 
 ---
 
-**`toggleCameraMirror`** — Mirror or un-mirror the local camera preview. No arguments.
+**`initiatePrivateChat(participantId)`** — Open a private chat window with the specified participant.
 
 ```js
-api.executeCommand('toggleCameraMirror');
+api.executeCommand('initiatePrivateChat', 'participant-jid-here');
 ```
 
 ---
 
-**`setFollowMe(enabled)`** — Enable or disable Follow Me mode (moderator view control).
+**`cancelPrivateChat`** — Close the active private chat window. No arguments.
 
 ```js
-api.executeCommand('setFollowMe', true);
+api.executeCommand('cancelPrivateChat');
 ```
 
 ---
 
-**`setMeetingTimer(seconds)`** — Set a countdown timer visible to all participants.
+**`showPiP`** — Show the Picture-in-Picture window. No arguments.
 
 ```js
-api.executeCommand('setMeetingTimer', 300); // 5 minutes
+api.executeCommand('showPiP');
+```
+
+---
+
+**`hidePiP`** — Hide the Picture-in-Picture window. No arguments.
+
+```js
+api.executeCommand('hidePiP');
+```
+
+---
+
+**`setSecondScreen(options)`** — Configure a second screen for the meeting.
+
+```js
+api.executeCommand('setSecondScreen', { enable: true });
 ```
 
 </Accordion>

@@ -1,5 +1,5 @@
 ---
-title: "IFrame API: Embed Jitsi Meet in Any Web App"
+title: "Jitsi IFrame API: Embed Meetings in Any Web Page"
 sidebarTitle: "Overview"
 description: "Embed a fully featured Jitsi Meet video conference into any web page with a few lines of JavaScript and control it programmatically."
 ---
@@ -10,7 +10,7 @@ The Jitsi Meet IFrame API lets you embed a fully featured video conference into 
 
 Load `external_api.js` from your Jitsi server, then instantiate `JitsiMeetExternalAPI` with a domain and an options object. The constructor creates an `<iframe>` element, appends it to a container node in your page, and loads the Jitsi Meet UI inside it. All communication between your host page and the iframe happens over the browser's `postMessage` API, so no special server-side setup is required.
 
-```
+```text
 Your Page  ──postMessage──▶  JitsiMeetExternalAPI  ──▶  <iframe>
                 ◀──events──
 ```

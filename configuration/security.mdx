@@ -1,5 +1,5 @@
 ---
-title: "Security Best Practices for Jitsi Meet"
+title: "Jitsi Meet Security: Passwords, Lobby, JWT, and E2EE"
 sidebarTitle: "Security"
 description: "A practical guide to hardening Jitsi Meet deployments using room passwords, lobby mode, JWT auth, E2EE, TLS certificates, and guest-access controls."
 ---
@@ -77,7 +77,7 @@ Benefits over room passwords:
 ```js
 // config.js — redirect unauthenticated users to your login service
 tokenAuthUrl:
-    'https://auth.example.com/sso?room={room}&challenge={code_challenge}&state={state}',
+    'https://auth.example.com/auth/{room}?code_challenge_method=S256&code_challenge={code_challenge}&state={state}',
 ```
 
 For the full JWT setup guide, including Prosody configuration and token payload structure, see [JWT Authentication](/configuration/jwt-auth).
@@ -130,7 +130,7 @@ If you bring your own certificate (e.g. from an internal CA or a commercial prov
 
 ```js
 // These are automatically set by the installer. Only override if needed.
-bosh: 'https://jitsi-meet.example.com/http-bind',       // must use https://
+bosh: 'https://jitsi-meet.example.com/http-bind',        // must use https://
 websocket: 'wss://jitsi-meet.example.com/xmpp-websocket', // must use wss://
 ```
 

@@ -1,7 +1,7 @@
 ---
-title: "Jitsi IFrame API Event Reference"
+title: "Jitsi IFrame API Events: Complete Reference Guide"
 sidebarTitle: "Events"
-description: "Complete reference for all Jitsi IFrame API events. React to participants joining, mute changes, recording state, errors, and dozens of other meeting signals."
+description: "Complete reference for all Jitsi IFrame API events. React to participants joining, mute changes, recording state, and other meeting signals."
 ---
 
 The Jitsi IFrame API emits events when meeting state changes — participants joining or leaving, mute toggling, recording starting, errors occurring, and more. Subscribe with `addEventListener` or register multiple listeners at once with `addEventListeners`. All event handlers receive a single data object whose shape is specific to each event.
@@ -75,6 +75,10 @@ api.addEventListener('readyToClose', () => {
   api.dispose();
 });
 ```
+
+---
+
+**`ready`** — Fired when the Jitsi Meet iframe has fully initialised and the internal transport is active. This is also used to trigger the `onload` callback provided in the constructor options.
 
 ---
 
@@ -186,6 +190,10 @@ api.addEventListener('dominantSpeakerChanged', ({ id }) => {
 
 **`participantMuted`** — Fired when a participant's mute state is changed by a moderator.
 
+---
+
+**`participantMenuButtonClick`** — Fired when a button in the participant context menu is clicked.
+
 </Accordion>
 
 <Accordion title="Audio and Video">
@@ -263,6 +271,14 @@ api.addEventListener('audioMuteStatusChanged', ({ muted }) => {
 
 **`micError`** — Fired when a microphone-related error occurs.
 
+---
+
+**`computePressureChanged`** — Fired when the system compute pressure level changes, which may affect media quality.
+
+---
+
+**`contentSharingParticipantsChanged`** — Fired when the list of participants sharing their screen changes.
+
 </Accordion>
 
 <Accordion title="Recording">
@@ -306,6 +322,14 @@ api.addEventListener('recordingStatusChanged', ({ on, mode, error }) => {
 
 **`transcriptionChunkReceived`** — Fired when a new transcription chunk arrives from the speech-to-text service.
 
+---
+
+**`fileUploaded`** — Fired when a file is uploaded in the meeting.
+
+---
+
+**`fileDeleted`** — Fired when a file is deleted in the meeting.
+
 </Accordion>
 
 <Accordion title="Lobby">
@@ -325,14 +349,6 @@ api.addEventListener('knockingParticipant', ({ participant }) => {
   api.executeCommand('answerKnockingParticipant', participant.id, admit);
 });
 ```
-
----
-
-**`lobbyStatusChanged`** — Fired when the lobby is enabled or disabled.
-
-| Field | Type | Description |
-|---|---|---|
-| `lobbyEnabled` | `boolean` | `true` if the lobby is now active |
 
 ---
 
@@ -414,6 +430,10 @@ api.addEventListener('incomingMessage', ({ nick, message, privateMessage }) => {
 | `senderInfo` | `object` | `{ id, displayName }` of the sender |
 | `eventData` | `object` | The raw message payload |
 
+---
+
+**`nonParticipantMessageReceived`** — Fired when a message is received from a non-participant source.
+
 </Accordion>
 
 <Accordion title="Breakout Rooms">
@@ -437,14 +457,6 @@ api.addEventListener('breakoutRoomsUpdated', (data) => {
 | Field | Type | Description |
 |---|---|---|
 | `enabled` | `boolean` | `true` if tile view is now active |
-
----
-
-**`e2eeStatusChanged`** — Fired when End-to-End Encryption is enabled or disabled.
-
-| Field | Type | Description |
-|---|---|---|
-| `enabled` | `boolean` | `true` if E2EE is now active |
 
 ---
 
@@ -488,11 +500,59 @@ api.addEventListener('breakoutRoomsUpdated', (data) => {
 
 ---
 
-**`contentSharingParticipantsChanged`** — Fired when the list of participants sharing their screen changes.
+**`feedbackSubmitted`** — Fired when the post-call feedback form is submitted.
 
 ---
 
-**`feedbackSubmitted`** — Fired when the post-call feedback form is submitted.
+**`feedbackPromptDisplayed`** — Fired when the post-call feedback prompt is shown to the user.
+
+---
+
+**`notificationTriggered`** — Fired when an in-meeting notification is shown.
+
+---
+
+**`customNotificationActionTriggered`** — Fired when the user clicks a custom action on a notification.
+
+---
+
+**`faceLandmarkDetected`** — Fired when a face landmark is detected by the local video analysis.
+
+---
+
+**`dataChannelOpened`** — Fired when the data channel connection to the bridge is opened.
+
+---
+
+**`dataChannelClosed`** — Fired when the data channel connection to the bridge is closed.
+
+---
+
+**`proxyConnectionEvent`** — Fired when a proxy connection event is received. Used for wireless screensharing integrations.
+
+---
+
+**`externalShareSignal`** — Fired when a direct-cast screenshare signalling message (offer, ICE candidate, or stop) is received.
+
+---
+
+**`pipEntered`** — Fired when the meeting enters Picture-in-Picture mode.
+
+---
+
+**`pipLeft`** — Fired when the meeting exits Picture-in-Picture mode.
+
+---
+
+**`secondScreenSourceChanged`** — Fired when the second screen source changes.
+
+---
+
+**`secondScreenClosed`** — Fired when the second screen window is closed.
+
+---
+
+**`secondScreenError`** — Fired when an error occurs with the second screen feature.
 
 ---
 
@@ -502,5 +562,17 @@ api.addEventListener('breakoutRoomsUpdated', (data) => {
 |---|---|---|
 | `logLevel` | `string` | The log level (e.g. `'info'`, `'warn'`, `'error'`) |
 | `arguments` | `string[]` | The log message parts |
+
+---
+
+**`mouseEnter`** — Fired when the mouse pointer enters the conference iframe.
+
+---
+
+**`mouseLeave`** — Fired when the mouse pointer leaves the conference iframe.
+
+---
+
+**`mouseMove`** — Fired when the mouse pointer moves within the conference iframe.
 
 </Accordion>
