@@ -1,0 +1,119 @@
+{
+  "projectType": "saas",
+  "projectName": "Jitsi Meet",
+  "projectDescription": "An open-source, WebRTC-powered video conferencing platform that can be used as a standalone application or embedded in any web or mobile app via the IFrame API and React Native SDK.",
+  "theme": "palm",
+  "primaryColor": "#8c8c8d",
+  "lightColor": "#d4d4d5",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "self-hosting"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/config-js",
+              "configuration/interface-config",
+              "configuration/jwt-auth",
+              "configuration/security"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/recording",
+              "features/breakout-rooms",
+              "features/virtual-backgrounds",
+              "features/e2ee",
+              "features/lobby-moderation"
+            ]
+          },
+          {
+            "group": "JaaS",
+            "pages": [
+              "jaas/overview",
+              "jaas/api-keys"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDKs & Integration",
+        "groups": [
+          {
+            "group": "IFrame API",
+            "pages": [
+              "iframe-api/overview",
+              "iframe-api/initialization",
+              "iframe-api/commands",
+              "iframe-api/events",
+              "iframe-api/functions"
+            ]
+          },
+          {
+            "group": "React Native SDK",
+            "pages": [
+              "react-native-sdk/overview",
+              "react-native-sdk/installation",
+              "react-native-sdk/usage",
+              "react-native-sdk/reference"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Browser-based video conferencing with no plugin required",
+    "IFrame API for embedding meetings into any web application",
+    "React Native SDK (@jitsi/react-native-sdk) for iOS and Android",
+    "End-to-end encryption (E2EE) via WebRTC Insertable Streams",
+    "Breakout rooms for splitting participants into sub-sessions",
+    "Virtual backgrounds and blur using TensorFlow.js",
+    "Server-side and local recording support",
+    "Lobby / knocking moderation system",
+    "AV moderation (mute/unmute control for moderators)",
+    "Jitsi as a Service (JaaS) hosted deployment via 8x8",
+    "JWT-based authentication and room access control",
+    "Scalable Video Coding (SVC) via Jitsi Videobridge (SFU)",
+    "Tile view, filmstrip, and large-video layout modes",
+    "Live subtitles / transcription",
+    "Polls, reactions, whiteboard, and chat with private messages"
+  ],
+  "publicApiSurface": [
+    "JitsiMeetExternalAPI (IFrame API constructor)",
+    "JitsiMeetExternalAPI.executeCommand(name, ...args)",
+    "JitsiMeetExternalAPI.addEventListener(event, listener)",
+    "JitsiMeetExternalAPI.addEventListeners(listeners)",
+    "JitsiMeetExternalAPI.removeEventListener(event, listener)",
+    "JitsiMeetExternalAPI.getAvailableDevices()",
+    "JitsiMeetExternalAPI.getCurrentDevices()",
+    "JitsiMeetExternalAPI.setAudioInputDevice(label, id)",
+    "JitsiMeetExternalAPI.setAudioOutputDevice(label, id)",
+    "JitsiMeetExternalAPI.setVideoInputDevice(label, id)",
+    "JitsiMeetExternalAPI.isDeviceChangeAvailable(deviceType)",
+    "JitsiMeetExternalAPI.dispose()",
+    "JitsiMeeting (React Native SDK component)",
+    "JitsiRefProps.close()",
+    "JitsiRefProps.setAudioMuted(muted)",
+    "JitsiRefProps.setVideoMuted(muted)",
+    "JitsiRefProps.setAudioOnly(value)",
+    "JitsiRefProps.getRoomsInfo()",
+    "IEventListeners.onConferenceJoined / onConferenceLeft",
+    "IEventListeners.onAudioMutedChanged / onVideoMutedChanged",
+    "IEventListeners.onParticipantJoined / onParticipantLeft",
+    "IEventListeners.onReadyToClose",
+    "config.js: hosts, bosh, websocket, p2p, e2eeLabels, prejoinConfig, toolbarButtons",
+    "interface_config.js (deprecated): APP_NAME, FILM_STRIP_MAX_HEIGHT, MOBILE_APP_PROMO"
+  ]
+}

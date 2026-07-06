@@ -1,0 +1,199 @@
+---
+title: "Security Best Practices for Jitsi Meet"
+sidebarTitle: "Security"
+description: "A practical guide to hardening Jitsi Meet deployments using room passwords, lobby mode, JWT auth, E2EE, TLS certificates, and guest-access controls."
+---
+
+Jitsi Meet provides several complementary security mechanisms that can be layered together to match the threat model of your deployment. A casual internal tool may only need HTTPS and room passwords, while a healthcare or financial-services deployment might require JWT authentication, end-to-end encryption, and lobby moderation on every call. This guide walks through each mechanism, how to configure it, and which combinations make sense together.
+
+---
+
+## Room Passwords
+
+Any meeting moderator can lock a room by setting a password through the Security options panel (the shield icon in the toolbar). Once set, new participants must enter the password before joining.
+
+**Key config.js options:**
+
+<ParamField path="roomPasswordNumberOfDigits" type="number | false" default="false">
+  When set to a positive integer, restricts room passwords to that number of digits (numeric only). This is useful for phone dial-in participants who can only enter digits. Example: `roomPasswordNumberOfDigits: 6`.
+</ParamField>
+
+<ParamField path="securityUi.disableLobbyPassword" type="boolean" default="false">
+  When `true`, hides the password input from the Security panel, preventing any participant from setting a room password. Useful when you want to rely solely on JWT auth or lobby mode.
+</ParamField>
+
+```js
+// config.js — restrict passwords to 6 digits (for dial-in compatibility)
+roomPasswordNumberOfDigits: 6,
+
+// Or disable passwords entirely and rely on JWT + lobby
+securityUi: {
+    disableLobbyPassword: true,
+},
+```
+
+<Note>
+  Room passwords are transmitted and enforced through the XMPP MUC layer. They are **not** a substitute for JWT authentication — a determined user who can reach the XMPP server may be able to bypass them. Use JWT authentication for strong access control.
+</Note>
+
+---
+
+## Lobby Mode
+
+Lobby mode places incoming participants into a waiting room where they must be explicitly admitted by a moderator. This is the simplest way to prevent uninvited guests without requiring a shared password.
+
+When lobby is active:
+- New participants see a "Waiting for the host" screen.
+- Moderators receive a notification for each knock request and can approve or reject individually.
+- Lobby chat can be enabled so the moderator can communicate with waiting participants.
+
+**Key config.js options:**
+
+```js
+lobby: {
+    autoKnock: false,       // if true, clients knock automatically on arrival
+    enableChat: true,       // moderator↔waiting-participant chat
+    showHangUp: true,       // show a "Leave" button in the lobby screen
+},
+
+securityUi: {
+    hideLobbyButton: false, // set true to hide the lobby toggle from all users
+},
+```
+
+For a full walkthrough of enabling and moderating the lobby, see the [Lobby & Moderation guide](/features/lobby-moderation).
+
+---
+
+## JWT Authentication
+
+JWT (JSON Web Token) authentication delegates access control to your own backend. Your server issues signed tokens that encode which user may access which room and with what permissions. Prosody verifies the signature before allowing any XMPP connection.
+
+Benefits over room passwords:
+- User identity (name, email, avatar) is asserted by your trusted backend, not self-reported.
+- Per-user feature flags (recording, screen-share, moderator) can be baked into the token.
+- Tokens expire automatically, eliminating the "shared password leakage" risk.
+
+```js
+// config.js — redirect unauthenticated users to your login service
+tokenAuthUrl:
+    'https://auth.example.com/sso?room={room}&challenge={code_challenge}&state={state}',
+```
+
+For the full JWT setup guide, including Prosody configuration and token payload structure, see [JWT Authentication](/configuration/jwt-auth).
+
+---
+
+## End-to-End Encryption (E2EE)
+
+E2EE encrypts media streams directly between participants using the WebRTC Insertable Streams API, so that even the Jitsi Videobridge cannot decrypt the audio and video. Encryption keys are exchanged via a secure out-of-band channel (or derived from a passphrase entered by participants).
+
+<Warning>
+  E2EE requires all participants to use a browser that supports WebRTC Insertable Streams (Chromium-based browsers and recent Firefox). It is also **incompatible** with recording and live-streaming features, since those services require access to the raw media.
+</Warning>
+
+**Enable E2EE in config.js:**
+
+```js
+e2ee: {
+    // Custom UI labels (optional)
+    labels: {
+        description: 'All media is encrypted end-to-end.',
+        label: 'E2EE',
+        tooltip: 'End-to-end encryption is active',
+        warning: 'Not all participants support E2EE',
+    },
+    // Set to true if keys are managed externally (e.g., by your key server)
+    externallyManagedKey: false,
+    // Set to true to disable E2EE entirely and remove the option from the UI
+    disabled: false,
+},
+```
+
+For a deeper explanation of the E2EE architecture and key exchange, see the [End-to-End Encryption guide](/features/e2ee).
+
+---
+
+## TLS / HTTPS
+
+All Jitsi Meet traffic — signalling, media, and the web app itself — must be served over TLS. The official Jitsi installation script automatically provisions a Let's Encrypt certificate via `certbot` during setup.
+
+**To renew or reprovision a certificate manually:**
+
+```bash
+sudo /usr/share/jitsi-meet/scripts/install-letsencrypt-cert.sh
+```
+
+If you bring your own certificate (e.g. from an internal CA or a commercial provider), place the certificate and private key on the server and update `/etc/nginx/sites-available/<domain>.conf` (or the Apache equivalent) to point to them.
+
+**Relevant config.js settings** (these are informational overrides used by the web app):
+
+```js
+// These are automatically set by the installer. Only override if needed.
+bosh: 'https://jitsi-meet.example.com/http-bind',       // must use https://
+websocket: 'wss://jitsi-meet.example.com/xmpp-websocket', // must use wss://
+```
+
+<Warning>
+  Never serve Jitsi Meet over plain HTTP in production. Browsers require a secure context (`https://`) to grant access to camera and microphone via `getUserMedia`. Without HTTPS, the meeting will silently fail to acquire media.
+</Warning>
+
+---
+
+## Disabling Guest Access
+
+By default, anyone who knows the room URL can join a Jitsi meeting anonymously. The following `config.js` options help restrict this.
+
+### Require a Display Name
+
+```js
+// Force every participant to enter a name before joining
+requireDisplayName: true,
+```
+
+This alone does not prevent anonymous access, but ensures every participant has a visible identity.
+
+### Require a JWT for All Users
+
+Set `authentication = "token"` in your Prosody configuration (see [JWT Auth](/configuration/jwt-auth)). With this setting, any connection without a valid JWT is rejected by the XMPP server — there is no anonymous fallback.
+
+### Separate Authenticated and Guest Domains
+
+For a hybrid deployment where registered users get moderator privileges and anonymous users join as guests (read-only or restricted), configure a guest subdomain:
+
+```js
+hosts: {
+    domain: 'jitsi-meet.example.com',
+    muc: 'conference.jitsi-meet.example.com',
+
+    // Guests are handled by a separate virtual host in Prosody
+    anonymousdomain: 'guest.jitsi-meet.example.com',
+},
+```
+
+In Prosody, the `guest.jitsi-meet.example.com` virtual host uses `authentication = "anonymous"` while the main domain uses `authentication = "token"`. This ensures that only token holders can *create* rooms; guests can join but not initiate.
+
+### Warn About Weak Room Names
+
+```js
+// Show a warning when the room name is easily guessable and no password/lobby is active
+enableInsecureRoomNameWarning: true,
+```
+
+---
+
+## Security Checklist
+
+Use this checklist before going live with a self-hosted Jitsi Meet deployment:
+
+- [ ] **HTTPS is enforced** — a valid TLS certificate is installed and HTTP redirects to HTTPS.
+- [ ] **WebSocket/BOSH URLs use TLS** — `bosh` starts with `https://` and `websocket` starts with `wss://`.
+- [ ] **JWT authentication is configured** — Prosody validates tokens and rejects unauthenticated connections for sensitive deployments.
+- [ ] **Room passwords are enabled or locked down** — either educate users to set passwords, or enforce lobby mode so moderators control admission.
+- [ ] **End-to-end encryption is offered** — E2EE is not disabled in `config.js` and users are informed of the option for sensitive calls.
+- [ ] **Lobby mode is available** — the `securityUi.hideLobbyButton` is `false` so moderators can enable the lobby when needed.
+- [ ] **Guest access is restricted** — `anonymousdomain` is configured or `authentication = "token"` is set on the main Prosody virtual host.
+- [ ] **`requireDisplayName` is enabled** — prevents fully anonymous participation.
+- [ ] **`enableInsecureRoomNameWarning` is enabled** — alerts participants to rooms that lack password or lobby protection.
+- [ ] **Packages are up to date** — run `sudo apt update && sudo apt upgrade` regularly to pick up Jitsi security patches.
+- [ ] **Firewall rules are in place** — only ports 80, 443, and 10000/UDP (media) are exposed; all other ports are firewalled.

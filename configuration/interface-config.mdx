@@ -1,0 +1,189 @@
+---
+title: "Interface Configuration Options for Jitsi Meet"
+sidebarTitle: "Interface Config"
+description: "Reference for interface_config.js UI options in Jitsi Meet, including background, filmstrip, language, and branding — plus how to override them via the IFrame API."
+---
+
+`interface_config.js` is a legacy configuration file that controls the visual and behavioural aspects of the Jitsi Meet user interface — things like the application name, filmstrip thumbnail height, language detection, and which browsers receive the full experience. On a standard installation it lives alongside `config.js` at `/etc/jitsi/meet/<domain>-interface_config.js`.
+
+<Warning>
+  `interface_config.js` is **deprecated**. All options are being progressively migrated to `config.js` and no new options are being added here. For new deployments, prefer the equivalent `config.js` settings where they exist. See the inline comments in `interface_config.js` for which options have already moved.
+</Warning>
+
+---
+
+## UI Identity & Branding
+
+<ParamField path="APP_NAME" type="string" default="Jitsi Meet">
+  The application name shown in browser tab titles, the welcome page heading, and various UI labels. Change this to white-label the product.
+</ParamField>
+
+<ParamField path="DEFAULT_BACKGROUND" type="string" default="#040404">
+  CSS colour value for the background behind the large video stage. Accepts any valid CSS colour string, e.g. `'#1a1a2e'` or `'rgb(10, 10, 30)'`.
+</ParamField>
+
+<ParamField path="PROVIDER_NAME" type="string" default="Jitsi">
+  The provider or brand name displayed in certain UI strings and the close-page promotional content.
+</ParamField>
+
+<ParamField path="SHOW_JITSI_WATERMARK" type="boolean" default="true">
+  Shows the Jitsi logo watermark in the top-left corner during calls. Set to `false` for white-label deployments.
+</ParamField>
+
+<ParamField path="SHOW_BRAND_WATERMARK" type="boolean" default="false">
+  Shows a custom brand watermark logo. Requires `BRAND_WATERMARK_LINK` to be set.
+</ParamField>
+
+<ParamField path="BRAND_WATERMARK_LINK" type="string" default="">
+  URL of the image to use as a brand watermark when `SHOW_BRAND_WATERMARK` is `true`.
+</ParamField>
+
+---
+
+## Notifications & Presence
+
+<ParamField path="DISABLE_JOIN_LEAVE_NOTIFICATIONS" type="boolean" default="false">
+  When `true`, the toast notifications that appear when participants join or leave the meeting are suppressed. Useful in large meetings where these messages would be distracting.
+</ParamField>
+
+<ParamField path="DISABLE_PRESENCE_STATUS" type="boolean" default="false">
+  Hides the presence status badges (e.g. "busy", "calling", "connected") shown on participant tiles.
+</ParamField>
+
+<ParamField path="DISABLE_DOMINANT_SPEAKER_INDICATOR" type="boolean" default="false">
+  Disables the visual indicator that highlights the current dominant (loudest) speaker.
+</ParamField>
+
+<ParamField path="DISABLE_TRANSCRIPTION_SUBTITLES" type="boolean" default="false">
+  Hides the speech-to-text transcription subtitles panel.
+</ParamField>
+
+---
+
+## Video & Filmstrip
+
+<ParamField path="DISABLE_VIDEO_BACKGROUND" type="boolean" default="false">
+  Prevents the blurred video background effect from being rendered behind the large video stage in supporting browsers.
+</ParamField>
+
+<ParamField path="FILM_STRIP_MAX_HEIGHT" type="number" default="120">
+  Maximum height in pixels of the filmstrip thumbnail tiles. Larger values give clearer previews of remote participants but consume more screen space.
+</ParamField>
+
+<ParamField path="VERTICAL_FILMSTRIP" type="boolean" default="true">
+  When `true`, the filmstrip is displayed as a vertical column on the right side of the screen. Set to `false` for a horizontal filmstrip along the bottom.
+</ParamField>
+
+<ParamField path="VIDEO_LAYOUT_FIT" type="string" default="both">
+  Controls how the large video is scaled to fill the available space. Valid values:
+  - `"both"` — fills the full screen (may crop)
+  - `"height"` — fits video height to screen height, preserves ratio
+  - `"width"` — fits video width to screen width, preserves ratio
+  - `"nocrop"` — largest possible size without any cropping
+</ParamField>
+
+<ParamField path="VIDEO_QUALITY_LABEL_DISABLED" type="boolean" default="false">
+  Hides the resolution badge (e.g. "HD", "720p") overlaid on the large video.
+</ParamField>
+
+---
+
+## Welcome Page & Room Names
+
+<ParamField path="GENERATE_ROOMNAMES_ON_WELCOME_PAGE" type="boolean" default="true">
+  When `true`, a random, human-readable room name is pre-populated in the "Start a new meeting" field on the welcome page, making it quicker to start ad-hoc meetings.
+</ParamField>
+
+<ParamField path="DISPLAY_WELCOME_PAGE_CONTENT" type="boolean" default="false">
+  Shows additional custom content below the main welcome page action. Requires a matching content block to be injected.
+</ParamField>
+
+<ParamField path="DISPLAY_WELCOME_FOOTER" type="boolean" default="true">
+  Shows the footer section on the welcome page.
+</ParamField>
+
+<ParamField path="RECENT_LIST_ENABLED" type="boolean" default="true">
+  Displays the list of recently joined rooms on the welcome page for signed-in users.
+</ParamField>
+
+---
+
+## Language & Accessibility
+
+<ParamField path="LANG_DETECTION" type="boolean" default="true">
+  When `true`, Jitsi Meet reads the browser's `Accept-Language` header and automatically selects the closest available UI translation. Set to `false` to always use the default language (`en`).
+</ParamField>
+
+<ParamField path="SETTINGS_SECTIONS" type="array">
+  Controls which sections appear in the Settings panel. Default: `['devices', 'language', 'moderator', 'profile', 'calendar', 'shortcuts', 'sounds', 'more']`. Remove entries to hide those settings panels from users.
+</ParamField>
+
+---
+
+## Mobile & Browser Compatibility
+
+<ParamField path="MOBILE_APP_PROMO" type="boolean" default="true">
+  When `true`, visitors using a mobile browser see a banner encouraging them to open (or install) the native Jitsi Meet app. Set to `false` to keep all users in the mobile browser.
+</ParamField>
+
+<ParamField path="OPTIMAL_BROWSERS" type="array" default='["chrome","chromium","firefox","electron","safari","webkit"]'>
+  List of browser identifiers that receive the full, unspoiled experience. Browsers not in this list and not in `UNSUPPORTED_BROWSERS` are shown a "suboptimal browser" warning. Valid identifiers: `chrome`, `chromium`, `electron`, `firefox`, `safari`, `webkit`.
+</ParamField>
+
+<ParamField path="UNSUPPORTED_BROWSERS" type="array" default="[]">
+  Browsers in this list are redirected to the unsupported-browser page instead of being allowed into the meeting.
+</ParamField>
+
+---
+
+## Options Moved to config.js
+
+The table below lists `interface_config.js` options that have been relocated. Use the `config.js` equivalents for all new deployments.
+
+| Removed interface_config.js key | config.js equivalent |
+|---|---|
+| `TOOLBAR_ALWAYS_VISIBLE` | `toolbarConfig.alwaysVisible` |
+| `INITIAL_TOOLBAR_TIMEOUT` | `toolbarConfig.initialTimeout` |
+| `TOOLBAR_TIMEOUT` | `toolbarConfig.timeout` |
+| `TOOLBAR_BUTTONS` | `toolbarButtons` |
+| `DEFAULT_LOCAL_DISPLAY_NAME` | `defaultLocalDisplayName` |
+| `DEFAULT_REMOTE_DISPLAY_NAME` | `defaultRemoteDisplayName` |
+| `DEFAULT_LOGO_URL` | `defaultLogoUrl` |
+| `DISABLE_FOCUS_INDICATOR` | `disableModeratorIndicator` |
+| `LIVE_STREAMING_HELP_LINK` | `liveStreaming.helpLink` |
+
+---
+
+## Overriding Options at Runtime via IFrame API
+
+For deployments where Jitsi Meet is embedded with the IFrame API, you can override `interfaceConfig` values at construction time without modifying the server-side file. Pass an `interfaceConfigOverwrite` object to the `JitsiMeetExternalAPI` constructor:
+
+```html
+<script src="https://meet.example.com/external_api.js"></script>
+<script>
+  const api = new JitsiMeetExternalAPI('meet.example.com', {
+    roomName: 'MyTeamMeeting',
+    parentNode: document.querySelector('#jitsi-container'),
+
+    // Override interface_config.js values for this embed only
+    interfaceConfigOverwrite: {
+      APP_NAME: 'Acme Meetings',
+      DEFAULT_BACKGROUND: '#1a1a2e',
+      DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+      FILM_STRIP_MAX_HEIGHT: 80,
+      GENERATE_ROOMNAMES_ON_WELCOME_PAGE: false,
+      MOBILE_APP_PROMO: false,
+      TOOLBAR_ALWAYS_VISIBLE: false,
+    },
+
+    // You can also override config.js values the same way
+    configOverwrite: {
+      startWithAudioMuted: true,
+    },
+  });
+</script>
+```
+
+<Note>
+  `interfaceConfigOverwrite` only affects the IFrame embed instance — it does not modify the server-side `interface_config.js` file. This makes it ideal for embedding Jitsi in multiple products with different branding from a single shared server.
+</Note>

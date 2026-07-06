@@ -1,0 +1,346 @@
+---
+title: "Jitsi IFrame API Device and Query Functions"
+sidebarTitle: "Functions"
+description: "Reference for all Jitsi IFrame API query and device functions. Inspect meeting state, manage audio and video devices, and retrieve participant information."
+---
+
+Beyond commands and events, the Jitsi IFrame API exposes asynchronous functions for querying the live meeting state and managing audio/video devices. Most functions return Promises that resolve with the requested data, allowing you to build dynamic UI controls such as device pickers, mute indicators, and participant lists.
+
+## Device Query Functions
+
+### `getAvailableDevices()`
+
+Returns a Promise that resolves with all media devices available to the browser, grouped by type. Each device entry contains a `deviceId`, `groupId`, `kind`, and `label`.
+
+```js
+const devices = await api.getAvailableDevices();
+// {
+//   audioInput:  [{ deviceId, groupId, kind, label }, ...],
+//   audioOutput: [{ deviceId, groupId, kind, label }, ...],
+//   videoInput:  [{ deviceId, groupId, kind, label }, ...]
+// }
+
+console.log('Cameras:', devices.videoInput.map(d => d.label));
+```
+
+---
+
+### `getCurrentDevices()`
+
+Returns a Promise that resolves with the currently selected audio and video devices.
+
+```js
+const current = await api.getCurrentDevices();
+// {
+//   audioInput:  { deviceId, groupId, kind, label },
+//   audioOutput: { deviceId, groupId, kind, label },
+//   videoInput:  { deviceId, groupId, kind, label }
+// }
+
+console.log('Active mic:', current.audioInput?.label);
+```
+
+---
+
+### `isDeviceChangeAvailable(deviceType?)`
+
+Returns a Promise resolving to `true` if the browser supports switching the specified device type at runtime. Returns `false` if switching is not possible (e.g. the browser does not expose the device API).
+
+<ParamField path="deviceType" type="string">
+  The device category to check. Pass `'output'` for audio output, `'input'` for audio/video input, or omit the argument to check both simultaneously.
+</ParamField>
+
+```js
+const canSwitchOutput = await api.isDeviceChangeAvailable('output');
+if (!canSwitchOutput) {
+  // Hide the audio output selector in your UI
+}
+```
+
+---
+
+### `isMultipleAudioInputSupported()`
+
+Returns a Promise resolving to `true` if the browser supports selecting multiple audio input devices. When `false`, only the default microphone will be available.
+
+```js
+const multiMic = await api.isMultipleAudioInputSupported();
+console.log('Multi-mic supported:', multiMic);
+```
+
+## Device Control Functions
+
+### `setAudioInputDevice(label, deviceId)`
+
+Sets the active microphone to the device matching the given label or device ID. Returns a Promise that resolves when the switch is complete.
+
+<ParamField path="label" type="string">
+  The human-readable label of the target device (e.g. `'Built-in Microphone'`). Used as the primary identifier if provided.
+</ParamField>
+
+<ParamField path="deviceId" type="string">
+  The `deviceId` string from the `MediaDeviceInfo` object. Used when `label` is empty or not unique.
+</ParamField>
+
+```js
+const devices = await api.getAvailableDevices();
+const headset = devices.audioInput.find(d => d.label.includes('Headset'));
+
+if (headset) {
+  await api.setAudioInputDevice(headset.label, headset.deviceId);
+}
+```
+
+---
+
+### `setAudioOutputDevice(label, deviceId)`
+
+Sets the active audio output device (speakers or headphones). Returns a Promise.
+
+<ParamField path="label" type="string">
+  The human-readable label of the target output device.
+</ParamField>
+
+<ParamField path="deviceId" type="string">
+  The `deviceId` from `MediaDeviceInfo`.
+</ParamField>
+
+```js
+await api.setAudioOutputDevice('Speakers (Realtek Audio)', 'device-id-here');
+```
+
+<Note>
+  Audio output selection is only available in browsers that support the `setSinkId` API (Chromium-based browsers). `isDeviceChangeAvailable('output')` will return `false` in unsupported browsers such as Firefox.
+</Note>
+
+---
+
+### `setVideoInputDevice(label, deviceId)`
+
+Sets the active camera to the specified device. Returns a Promise.
+
+<ParamField path="label" type="string">
+  The human-readable label of the target camera (e.g. `'FaceTime HD Camera'`).
+</ParamField>
+
+<ParamField path="deviceId" type="string">
+  The `deviceId` from `MediaDeviceInfo`.
+</ParamField>
+
+```js
+await api.setVideoInputDevice('External Webcam', 'device-id-here');
+```
+
+## Meeting State Query Functions
+
+### `getRoomsInfo()`
+
+Returns a Promise that resolves with the current conference room structure, including all breakout rooms and their participant lists.
+
+```js
+const rooms = await api.getRoomsInfo();
+// {
+//   rooms: {
+//     'main-room-jid': { id, name, isMainRoom: true, participants: { ... } },
+//     'breakout-jid-1': { id, name, isMainRoom: false, participants: { ... } }
+//   }
+// }
+```
+
+---
+
+### `getParticipantsInfo()`
+
+Returns a synchronous array of objects describing all current conference participants, including the local user. Each object contains the participant's stored metadata.
+
+```js
+const participants = api.getParticipantsInfo();
+// [
+//   { participantId, displayName, formattedDisplayName, avatarURL, email },
+//   ...
+// ]
+
+participants.forEach(p => console.log(p.displayName, p.participantId));
+```
+
+<Note>
+  `getParticipantsInfo()` reads from the API's in-memory participant cache and is synchronous — it does not return a Promise.
+</Note>
+
+---
+
+### `getVideoQuality()`
+
+Returns the current video quality setting as a number (height in pixels). This is also synchronous and reads from the cached value received via the `videoQualityChanged` event.
+
+```js
+const quality = api.getVideoQuality();
+console.log('Current video quality:', quality, 'p');
+```
+
+---
+
+### `getNumberOfParticipants()`
+
+Returns the current total participant count across all rooms (including breakout rooms) as a synchronous integer.
+
+```js
+const count = api.getNumberOfParticipants();
+console.log(`${count} participant(s) in the conference`);
+```
+
+---
+
+### `isAudioMuted()`
+
+Returns a Promise resolving to `true` if the local participant's microphone is currently muted.
+
+```js
+const muted = await api.isAudioMuted();
+if (muted) {
+  console.log('You are muted.');
+}
+```
+
+---
+
+### `isVideoMuted()`
+
+Returns a Promise resolving to `true` if the local participant's camera is currently off.
+
+```js
+const videoOff = await api.isVideoMuted();
+```
+
+---
+
+### `isAudioDisabled()`
+
+Returns a Promise resolving to `true` if audio has been disabled entirely (e.g. by moderation or a configuration policy), distinct from the user muting themselves.
+
+```js
+const disabled = await api.isAudioDisabled();
+if (disabled) {
+  // Hide the unmute button — user cannot unmute
+}
+```
+
+---
+
+### `isAudioAvailable()`
+
+Returns a Promise resolving to `true` if an audio input device is available.
+
+---
+
+### `isVideoAvailable()`
+
+Returns a Promise resolving to `true` if a video input device is available.
+
+---
+
+### `isSharingScreen()`
+
+Returns a Promise resolving to `true` if the local participant is currently sharing their screen.
+
+```js
+const sharing = await api.isSharingScreen();
+```
+
+---
+
+### `isP2pActive()`
+
+Returns a Promise resolving to `true` if the call is currently running in peer-to-peer (P2P) mode rather than through a Jitsi Video Bridge.
+
+---
+
+### `getSessionId()`
+
+Returns a Promise that resolves with the unique session ID for the current conference.
+
+```js
+const sessionId = await api.getSessionId();
+console.log('Session:', sessionId);
+```
+
+---
+
+### `getIFrame()`
+
+Returns the underlying `HTMLIFrameElement` synchronously. Useful if you need to style the iframe or attach additional DOM event listeners directly.
+
+```js
+const frame = api.getIFrame();
+frame.style.borderRadius = '8px';
+```
+
+## Cleanup
+
+### `dispose()`
+
+Removes the iframe from the DOM and tears down all event listeners, transport connections, and internal observers. This method is **synchronous** and does not return a Promise.
+
+```js
+api.dispose();
+```
+
+<Warning>
+  After calling `dispose()`, the API instance is no longer usable. Do not call any other methods on a disposed instance. Create a new `JitsiMeetExternalAPI` instance if you need to start another meeting.
+</Warning>
+
+## Device Selection Example
+
+The following pattern shows how to build a complete device picker that lets the user choose from all available cameras before or during a meeting.
+
+```js
+async function buildDevicePicker(api) {
+  const devices = await api.getAvailableDevices();
+  const current = await api.getCurrentDevices();
+  const canSwitch = await api.isDeviceChangeAvailable('input');
+
+  if (!canSwitch) {
+    console.warn('Device switching is not supported in this browser.');
+    return;
+  }
+
+  const cameras = devices.videoInput;
+  const mics    = devices.audioInput;
+  const outputs = devices.audioOutput;
+
+  // --- Build a simple camera selector ---
+  const cameraSelect = document.getElementById('camera-select');
+  cameras.forEach(cam => {
+    const opt = document.createElement('option');
+    opt.value = cam.deviceId;
+    opt.text  = cam.label || `Camera ${cam.deviceId.slice(0, 8)}`;
+    if (current.videoInput?.deviceId === cam.deviceId) opt.selected = true;
+    cameraSelect.appendChild(opt);
+  });
+
+  cameraSelect.addEventListener('change', async () => {
+    const selected = cameras.find(c => c.deviceId === cameraSelect.value);
+    if (selected) {
+      await api.setVideoInputDevice(selected.label, selected.deviceId);
+      console.log('Switched camera to:', selected.label);
+    }
+  });
+
+  // --- Switch to the second camera if more than one is available ---
+  if (cameras.length > 1) {
+    await api.setVideoInputDevice(cameras[1].label, cameras[1].deviceId);
+    console.log('Using second camera:', cameras[1].label);
+  }
+
+  // --- Switch audio output to first non-default output ---
+  const canSwitchOutput = await api.isDeviceChangeAvailable('output');
+  if (canSwitchOutput && outputs.length > 1) {
+    await api.setAudioOutputDevice(outputs[1].label, outputs[1].deviceId);
+  }
+}
+
+// Call after the conference is joined
+api.addEventListener('videoConferenceJoined', () => {
+  buildDevicePicker(api);
+});
+```

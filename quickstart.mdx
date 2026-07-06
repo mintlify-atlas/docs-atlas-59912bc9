@@ -1,47 +1,250 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Quickstart: Embed Jitsi Meet in 5 Minutes"
+sidebarTitle: "Quickstart"
+description: "Embed a live Jitsi Meet video conference into any web page using the IFrame API — no backend required, just a script tag and minimal JavaScript."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+The Jitsi Meet IFrame API lets you embed a complete, production-ready video conference directly into any web page. By loading a single JavaScript file from your Jitsi server, you get access to the `JitsiMeetExternalAPI` constructor, a rich set of commands, and a full event system — all without managing any backend infrastructure. This quickstart walks you through every step, from adding the script tag to listening for participant events, so you can go from zero to a live embedded meeting in under five minutes.
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+---
 
 ## Prerequisites
 
-Before you begin, you must have:
+- A modern browser with WebRTC support (Chrome, Firefox, Edge, or Safari 14+)
+- A text editor and a way to serve an HTML file (even `python3 -m http.server` works)
+- No server-side code or account required when using `meet.jit.si`
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+---
 
-## Get started
+## Steps
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  ### Load the IFrame API Script
 
-    ```bash
-    npm install your-package
-    ```
-  </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+  Add the Jitsi Meet External API script to the `<head>` (or end of `<body>`) of your HTML page. The script is served directly from the Jitsi instance you want to connect to:
 
-    ```bash
-    your-cli init
-    ```
-  </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+  ```html
+  <script src="https://meet.jit.si/external_api.js"></script>
+  ```
 
-    ```bash
-    your-cli start
-    ```
-  </Step>
+  This script exposes the `JitsiMeetExternalAPI` class globally. If you are self-hosting, replace `meet.jit.si` with your own domain — the script must always be loaded from the **same domain** as the server that will host the meeting.
+
+  <Tip>
+    For production workloads, point this script tag — and the `domain` option in the next step — at your own self-hosted Jitsi instance or your JaaS subdomain (`8x8.vc`) rather than the public `meet.jit.si`. The public instance is rate-limited and not suitable for high-volume or branded deployments.
+  </Tip>
+
+  ### Create a Container Element
+
+  Add a `<div>` to your page where the meeting iframe will be injected. Give it an `id` so you can reference it from JavaScript:
+
+  ```html
+  <div id="meet"></div>
+  ```
+
+  You can size this element with CSS to fit your layout — the API will match the iframe to the container's dimensions, or you can pass explicit `width` and `height` options in the next step.
+
+  ### Initialise the API
+
+  After the script has loaded, create a new `JitsiMeetExternalAPI` instance. Pass the **domain** as the first argument and an **options object** as the second:
+
+  ```javascript
+  const domain = "meet.jit.si";
+
+  const options = {
+    roomName: "MyAwesomeProjectKickoff",   // unique room name (no spaces)
+    width: "100%",                          // iframe width (px or %)
+    height: 600,                            // iframe height in px
+    parentNode: document.getElementById("meet"), // container element
+    configOverwrite: {
+      startWithAudioMuted: true,            // join muted by default
+      disableModeratorIndicator: false,
+    },
+    interfaceConfigOverwrite: {
+      TOOLBAR_BUTTONS: [                    // limit visible toolbar buttons
+        "microphone", "camera", "closedcaptions",
+        "desktop", "chat", "raisehand",
+        "videoquality", "tileview", "hangup",
+      ],
+    },
+  };
+
+  const api = new JitsiMeetExternalAPI(domain, options);
+  ```
+
+  The `roomName` uniquely identifies the conference. Anyone who loads the page (or visits the same room URL on meet.jit.si) will join the same call. The `configOverwrite` and `interfaceConfigOverwrite` objects let you override any option from `config.js` and `interface_config.js` respectively without touching server files.
+
+  ### Listen to Events
+
+  The `api` object is an `EventEmitter`. Use `addEventListener` to react to meeting lifecycle events:
+
+  ```javascript
+  // Fired when the local participant successfully joins the conference
+  api.addEventListener("videoConferenceJoined", (event) => {
+    console.log("Joined room:", event.roomName);
+    console.log("Local participant ID:", event.id);
+  });
+
+  // Fired when the local participant leaves or the conference ends
+  api.addEventListener("videoConferenceLeft", () => {
+    console.log("Left the conference");
+    // e.g. redirect the user or clean up the container
+  });
+
+  // Fired whenever a remote participant joins
+  api.addEventListener("participantJoined", (event) => {
+    console.log("Participant joined:", event.displayName, event.id);
+  });
+
+  // Fired when audio mute state changes
+  api.addEventListener("audioMuteStatusChanged", (event) => {
+    console.log("Audio muted:", event.muted);
+  });
+  ```
+
+  You can listen to as many events as you need. See the [full IFrame API reference](https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-iframe) for the complete list of available events.
+
+  <Note>
+    The full IFrame API supports dozens of events, including `participantLeft`, `dominantSpeakerChanged`, `recordingStatusChanged`, `knockingParticipant`, and more. Check the [IFrame API handbook page](https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-iframe) for the authoritative reference.
+  </Note>
+
+  ### Execute Commands
+
+  You can programmatically control the meeting at any time by calling `api.executeCommand(commandName, ...args)`:
+
+  ```javascript
+  // Toggle the local participant's microphone
+  api.executeCommand("toggleAudio");
+
+  // Toggle the local participant's camera
+  api.executeCommand("toggleVideo");
+
+  // Change the meeting subject shown in the header
+  api.executeCommand("subject", "Sprint Review — Week 42");
+
+  // Set the local participant's display name
+  api.executeCommand("displayName", "Jane Smith");
+
+  // Hang up and leave the conference
+  api.executeCommand("hangup");
+  ```
+
+  Commands are fire-and-forget — they are sent to the embedded iframe as `postMessage` calls and take effect asynchronously. To clean up the iframe entirely after hanging up, call `api.dispose()`.
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+---
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+## Complete Working Example
+
+The snippet below is a self-contained HTML page you can save and open in a browser right now. It is based on the [official example](https://github.com/jitsi/jitsi-meet/blob/master/doc/examples/api.html) from the Jitsi Meet repository.
+
+<CodeGroup>
+```html index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Embedded Jitsi Meet</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #1e1e2e; color: #cdd6f4; }
+    header {
+      padding: 1rem 1.5rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    #meet { width: 100%; height: calc(100vh - 56px); }
+    button {
+      padding: 0.4rem 1rem; border-radius: 6px; border: none;
+      background: #cba6f7; color: #1e1e2e; cursor: pointer; font-weight: 600;
+    }
+    button:hover { background: #b4befe; }
+  </style>
+</head>
+<body>
+  <!-- Script MUST be loaded from the same domain as the meeting server -->
+  <script src="https://meet.jit.si/external_api.js"></script>
+
+  <header>
+    <span>Embedded Meeting</span>
+    <button onclick="toggleAudio()">Toggle Mic</button>
+    <button onclick="hangup()">Leave</button>
+  </header>
+
+  <div id="meet"></div>
+
+  <script src="meeting.js"></script>
+</body>
+</html>
+```
+
+```javascript meeting.js
+const domain = "meet.jit.si";
+
+const options = {
+  roomName: "JitsiMeetAPIExample",
+  width: "100%",
+  height: "100%",
+  parentNode: document.getElementById("meet"),
+  configOverwrite: {
+    startWithAudioMuted: true,
+    startWithVideoMuted: false,
+    prejoinPageEnabled: false,        // skip the pre-join lobby screen
+  },
+  interfaceConfigOverwrite: {
+    TOOLBAR_BUTTONS: [
+      "microphone", "camera", "desktop",
+      "chat", "raisehand", "tileview",
+      "videoquality", "hangup",
+    ],
+  },
+};
+
+const api = new JitsiMeetExternalAPI(domain, options);
+
+// ── Event listeners ──────────────────────────────────────────────────────────
+
+api.addEventListener("videoConferenceJoined", (event) => {
+  console.log("✅ Joined conference:", event.roomName, "as", event.displayName);
+});
+
+api.addEventListener("videoConferenceLeft", () => {
+  console.log("👋 Left the conference — disposing iframe");
+  api.dispose();
+});
+
+api.addEventListener("participantJoined", (event) => {
+  console.log("➕ Participant joined:", event.displayName);
+});
+
+api.addEventListener("participantLeft", (event) => {
+  console.log("➖ Participant left:", event.id);
+});
+
+api.addEventListener("audioMuteStatusChanged", (event) => {
+  console.log("🎤 Muted:", event.muted);
+});
+
+// ── Command helpers (called by the buttons in index.html) ────────────────────
+
+function toggleAudio() {
+  api.executeCommand("toggleAudio");
+}
+
+function hangup() {
+  api.executeCommand("hangup");
+}
+```
+</CodeGroup>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="IFrame API Reference" icon="book-open" href="https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-iframe">
+    Full list of commands, events, and getters available on the `JitsiMeetExternalAPI` object.
+  </Card>
+  <Card title="Self-Hosting Guide" icon="server" href="/self-hosting">
+    Run your own Jitsi Meet instance on Debian/Ubuntu or Docker for production and branded deployments.
+  </Card>
+</CardGroup>

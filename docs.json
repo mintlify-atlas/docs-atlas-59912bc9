@@ -1,72 +1,93 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Jitsi Meet",
+  "theme": "palm",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#8c8c8d",
+    "light": "#d4d4d5",
+    "dark": "#8c8c8d"
   },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
+  "favicon": "https://media.brand.dev/3260863a-0883-4147-88d9-bf5723d63fa7.png",
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "https://media.brand.dev/f2cf6451-e776-4160-aa11-43dc5b584f2d.png",
+    "dark": "https://media.brand.dev/f2cf6451-e776-4160-aa11-43dc5b584f2d.png"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/jitsi/jitsi-meet"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/jitsi/jitsi-meet"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "self-hosting"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/config-js",
+              "configuration/interface-config",
+              "configuration/jwt-auth",
+              "configuration/security"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/recording",
+              "features/breakout-rooms",
+              "features/virtual-backgrounds",
+              "features/e2ee",
+              "features/lobby-moderation"
+            ]
+          },
+          {
+            "group": "JaaS",
+            "pages": [
+              "jaas/overview",
+              "jaas/api-keys"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDKs & Integration",
+        "groups": [
+          {
+            "group": "IFrame API",
+            "pages": [
+              "iframe-api/overview",
+              "iframe-api/initialization",
+              "iframe-api/commands",
+              "iframe-api/events",
+              "iframe-api/functions"
+            ]
+          },
+          {
+            "group": "React Native SDK",
+            "pages": [
+              "react-native-sdk/overview",
+              "react-native-sdk/installation",
+              "react-native-sdk/usage",
+              "react-native-sdk/reference"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

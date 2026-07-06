@@ -1,0 +1,63 @@
+---
+title: "IFrame API: Embed Jitsi Meet in Any Web App"
+sidebarTitle: "Overview"
+description: "Embed a fully featured Jitsi Meet video conference into any web page with a few lines of JavaScript and control it programmatically."
+---
+
+The Jitsi Meet IFrame API lets you embed a fully featured video conference into any web page with a few lines of JavaScript. You control the meeting programmatically — executing commands, listening to events, and querying device state — without ever leaving your application.
+
+## How It Works
+
+Load `external_api.js` from your Jitsi server, then instantiate `JitsiMeetExternalAPI` with a domain and an options object. The constructor creates an `<iframe>` element, appends it to a container node in your page, and loads the Jitsi Meet UI inside it. All communication between your host page and the iframe happens over the browser's `postMessage` API, so no special server-side setup is required.
+
+```
+Your Page  ──postMessage──▶  JitsiMeetExternalAPI  ──▶  <iframe>
+                ◀──events──
+```
+
+## Quick Example
+
+The following is a minimal working page that opens a Jitsi meeting inside the document body.
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <script src="https://meet.jit.si/external_api.js"></script>
+    <script>
+      const api = new JitsiMeetExternalAPI('meet.jit.si', {
+        roomName: 'MyFirstMeeting',
+        width: 700,
+        height: 500,
+        parentNode: document.body
+      });
+    </script>
+  </body>
+</html>
+```
+
+## What You Can Do
+
+<CardGroup cols={2}>
+  <Card title="Initialization" icon="circle-play" href="/iframe-api/initialization">
+    Load the script, configure the constructor options, and embed the iframe into your app.
+  </Card>
+  <Card title="Commands" icon="terminal" href="/iframe-api/commands">
+    Control the meeting programmatically: mute audio, toggle video, kick participants, and more.
+  </Card>
+  <Card title="Events" icon="bolt" href="/iframe-api/events">
+    Subscribe to real-time meeting events such as participants joining, recording status, and errors.
+  </Card>
+  <Card title="Device Functions" icon="microphone" href="/iframe-api/functions">
+    Query and change audio/video devices, check mute state, and inspect participant info.
+  </Card>
+</CardGroup>
+
+## Server URL
+
+<Tip>
+  For production deployments, replace `meet.jit.si` with your own Jitsi server domain or your JaaS (Jitsi as a Service) tenant URL such as `8x8.vc`. Using `meet.jit.si` is fine for development but should not be relied upon in production applications.
+</Tip>

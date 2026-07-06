@@ -1,0 +1,111 @@
+---
+title: "Virtual Backgrounds and Blur in Jitsi Meet"
+sidebarTitle: "Virtual Backgrounds"
+description: "Apply blur, image, or custom virtual backgrounds in Jitsi Meet. All processing runs locally in the browser via TensorFlow.js — no video data leaves your device."
+---
+
+Jitsi Meet supports virtual background effects including background blur, subtle blur, and full image replacement with built-in or custom images. All background processing runs locally in the browser using TensorFlow.js — your raw video feed never leaves your device. This makes the feature privacy-friendly and independent of any server-side infrastructure.
+
+## Background Types
+
+<CardGroup cols={2}>
+  <Card title="Blur" icon="circle-half-stroke">
+    Applies a strong Gaussian blur to your background, keeping you in sharp focus. Ideal for hiding messy or private spaces without using a custom image.
+  </Card>
+  <Card title="Slight Blur" icon="droplet">
+    Applies a softer, less aggressive blur. Maintains some background context while still reducing distraction during a call.
+  </Card>
+  <Card title="Virtual Image" icon="image">
+    Replaces your background with a built-in image (office, beach, etc.) or a custom image URL you supply. Uses a segmentation model to separate you from your background.
+  </Card>
+  <Card title="None (Disabled)" icon="x">
+    Removes any active background effect and reverts to your raw camera feed. Use this to restore full performance if background effects are causing frame rate issues.
+  </Card>
+</CardGroup>
+
+## Browser Support
+
+<Note>
+  Virtual backgrounds require a **Chromium-based browser** (Chrome 79+, Edge 79+, Brave) or **Firefox** with WebGL enabled. The feature is not available in Safari or on most mobile browsers due to limitations with WebGL and the required machine learning APIs. The Jitsi Electron desktop app supports virtual backgrounds on all platforms. If a participant's browser does not support the required APIs, the virtual background option will be hidden from the UI automatically.
+</Note>
+
+## IFrame API Control
+
+Use the `setVirtualBackground` command to programmatically set or change the background effect for the local participant.
+
+```js
+const api = new JitsiMeetExternalAPI(domain, options);
+
+// Apply strong blur
+api.executeCommand('setVirtualBackground', {
+  backgroundType: 'blur',
+  blurValue: 25
+});
+
+// Apply slight blur
+api.executeCommand('setVirtualBackground', {
+  backgroundType: 'blur',
+  blurValue: 8
+});
+
+// Set a built-in image background (by thumbnail ID)
+api.executeCommand('setVirtualBackground', {
+  backgroundType: 'image',
+  selectedThumbnail: 'cat'
+});
+
+// Set a custom remote image as the background
+api.executeCommand('setVirtualBackground', {
+  backgroundType: 'image',
+  selectedThumbnail: 'custom',
+  virtualSource: 'https://example.com/your-background.jpg'
+});
+
+// Disable all background effects
+api.executeCommand('setVirtualBackground', {
+  backgroundType: 'none'
+});
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `backgroundType` | `'blur' \| 'image' \| 'none'` | The type of background effect to apply |
+| `blurValue` | `number` | Blur intensity (higher = more blur). Used when `backgroundType` is `'blur'` |
+| `selectedThumbnail` | `string` | The ID of a built-in image, or `'custom'` when supplying `virtualSource` |
+| `virtualSource` | `string` | A fully-qualified URL to a custom background image |
+
+<Tip>
+  For best segmentation quality, use background images with a resolution of at least **1280×720** and avoid images with a lot of fine detail near the edges. JPEG and PNG formats are both supported.
+</Tip>
+
+## Enable / Disable in config.js
+
+```js
+// config.js
+
+// Provide custom background images that appear in the backgrounds picker.
+// Each entry needs a unique 'id' and an 'src' pointing to the image.
+virtualBackgrounds: [
+  {
+    id: 'office',
+    src: 'https://cdn.example.com/bg/office.jpg',
+    tooltip: 'Modern Office'
+  },
+  {
+    id: 'beach',
+    src: 'https://cdn.example.com/bg/beach.jpg',
+    tooltip: 'Tropical Beach'
+  }
+],
+
+// Set to true to hide the virtual background feature from the UI entirely.
+// Useful for low-powered devices or constrained deployments.
+disableVirtualBackground: false
+```
+
+<Accordion title="Performance tips for virtual backgrounds">
+  - Virtual backgrounds are computationally expensive. On older or mobile-class hardware, enabling blur can reduce frame rates noticeably.
+  - If participants report performance issues, recommend they use **Slight Blur** instead of full blur, or choose a static image background (which is lighter than blur).
+  - You can disable the feature for all participants by setting `disableVirtualBackground: true` in `config.js`.
+  - The segmentation model is downloaded on first use and cached by the browser — the initial load may take a few seconds on slower connections.
+</Accordion>

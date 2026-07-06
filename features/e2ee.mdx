@@ -1,0 +1,103 @@
+---
+title: "End-to-End Encryption in Jitsi Meet"
+sidebarTitle: "E2EE"
+description: "Enable End-to-End Encryption in Jitsi Meet using WebRTC Insertable Streams so media is encrypted on-device and never readable by servers."
+---
+
+Jitsi Meet supports optional End-to-End Encryption (E2EE) using the WebRTC Insertable Streams API. When E2EE is enabled, media is encrypted directly on the sender's device before it enters the WebRTC pipeline, and it is decrypted only on each recipient's device. The Jitsi server infrastructure relays encrypted packets but cannot read their contents — the server sees only ciphertext.
+
+## How E2EE Works
+
+Jitsi's standard transport already uses DTLS-SRTP, which encrypts traffic between each participant and the server. E2EE adds a **second encryption layer** on top of this at the application level:
+
+1. Each participant generates a symmetric encryption key locally.
+2. Keys are exchanged between participants through the end-to-end encrypted signaling channel (not via the media server).
+3. Outgoing audio and video frames are encrypted using the Insertable Streams API before being handed to the WebRTC engine.
+4. Incoming frames are decrypted by the recipient's browser before rendering, using the sender's shared key.
+
+This means even the Jitsi videobridge — which routes media — cannot decrypt any participant's audio or video.
+
+<Warning>
+  E2EE requires a **Chromium-based browser** (Chrome, Edge, or the Jitsi Electron desktop app). Firefox and Safari do not support the WebRTC Insertable Streams API. Participants joining from unsupported browsers will have E2EE automatically disabled for their session, and other participants will be notified. For meetings where E2EE is mandatory, restrict access to supported clients only.
+</Warning>
+
+## Participant Limits with E2EE
+
+The source defines automatic mode thresholds:
+
+| Participant count | E2EE behavior |
+|---|---|
+| ≤ 20 (`MAX_MODE_LIMIT`) | Fully available — E2EE can be toggled freely |
+| 21–25 (`MAX_MODE_LIMIT + MAX_MODE_THRESHOLD`) | `ENABLED` mode — E2EE can still be toggled but a performance warning is displayed |
+| > 25 | `THRESHOLD_EXCEEDED` — E2EE is automatically disabled to protect call quality |
+
+## Enabling E2EE
+
+<Tabs>
+  <Tab title="In the UI">
+    1. Click the **Shield (Security)** icon in the meeting toolbar.
+    2. In the Security options panel, toggle **End-to-End Encryption** on.
+    3. All participants who support E2EE will automatically negotiate encrypted sessions.
+  </Tab>
+  <Tab title="IFrame API">
+    ```js
+    const api = new JitsiMeetExternalAPI(domain, options);
+
+    // Enable E2EE
+    api.executeCommand('toggleE2EE', true);
+
+    // Disable E2EE
+    api.executeCommand('toggleE2EE', false);
+    ```
+  </Tab>
+</Tabs>
+
+## E2EE with Externally Managed Keys
+
+For deployments where key management must be handled outside of Jitsi (e.g., a custom KMS or a pre-shared key scheme), use the `setMediaEncryptionKey` command to inject a specific key rather than relying on Jitsi's built-in key exchange.
+
+```js
+// Supply a custom encryption key as a JSON-serialised key info object
+const keyInfo = JSON.stringify({
+  aesGcmKeyParams: {
+    name: 'AES-GCM',
+    length: 256
+  },
+  // The exported key material (base64-encoded or a CryptoKey)
+  exportedKey: '<your-base64-encoded-key>'
+});
+
+api.executeCommand('setMediaEncryptionKey', keyInfo);
+```
+
+<Tip>
+  When using externally managed keys, set `e2ee.externallyManagedKey: true` in `config.js`. This disables Jitsi's default key exchange UI and signals to the client that your application is responsible for distributing keys to all participants.
+</Tip>
+
+## JaaS and E2EE
+
+<Note>
+  On **JaaS (8x8.vc)** deployments, E2EE is available and can be enabled per-meeting. Because JaaS runs a selective forwarding unit (SFU), E2EE means the SFU forwards ciphertext without being able to decode media. Refer to the [JaaS overview](/jaas/overview) for plan-specific availability and any restrictions on participant limits when E2EE is active.
+</Note>
+
+## config.js Settings
+
+```js
+// config.js
+
+e2ee: {
+  // Set to true if your application manages encryption keys externally.
+  // Disables Jitsi's built-in key exchange and UI controls.
+  externallyManagedKey: false
+},
+
+// Customise the labels shown in the E2EE UI section.
+// Useful for white-label deployments or custom terminology.
+e2eeLabels: {
+  e2ee: 'End-to-End Encryption',
+  labelToolTip: 'Encrypted using E2EE',
+  description: 'Your meeting is end-to-end encrypted.',
+  label: 'E2EE',
+  warning: 'Performance may be affected with many participants.'
+}
+```

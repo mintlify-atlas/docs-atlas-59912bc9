@@ -1,0 +1,506 @@
+---
+title: "Jitsi IFrame API Event Reference"
+sidebarTitle: "Events"
+description: "Complete reference for all Jitsi IFrame API events. React to participants joining, mute changes, recording state, errors, and dozens of other meeting signals."
+---
+
+The Jitsi IFrame API emits events when meeting state changes — participants joining or leaving, mute toggling, recording starting, errors occurring, and more. Subscribe with `addEventListener` or register multiple listeners at once with `addEventListeners`. All event handlers receive a single data object whose shape is specific to each event.
+
+## Subscribing to Events
+
+```js
+// Subscribe to a single event
+api.addEventListener('videoConferenceJoined', (event) => {
+  console.log('Joined!', event.roomName);
+});
+
+// Subscribe to multiple events at once
+api.addEventListeners({
+  videoConferenceJoined: handleJoined,
+  videoConferenceLeft: handleLeft,
+  participantJoined: handleParticipant
+});
+
+// Remove a specific listener
+api.removeEventListener('videoConferenceJoined', handleJoined);
+
+// Remove all listeners for an event
+api.removeEventListeners(['videoConferenceJoined', 'participantJoined']);
+```
+
+<Note>
+  `addEventListener` and `addEventListeners` are backwards-compatible wrappers around Node.js `EventEmitter`. You can also use `api.on(event, handler)` and `api.off(event, handler)` directly. Call `api.getSupportedEvents()` to retrieve the full list of supported event names at runtime.
+</Note>
+
+## All Events
+
+<Accordion title="Conference Lifecycle">
+
+**`videoConferenceJoined`** — Fired when the local participant successfully joins the conference.
+
+| Field | Type | Description |
+|---|---|---|
+| `roomName` | `string` | The name of the conference room |
+| `id` | `string` | The local participant's JID |
+| `displayName` | `string` | The local participant's display name |
+| `avatarURL` | `string` | The local participant's avatar URL |
+| `breakoutRoom` | `boolean` | Whether this is a breakout room |
+
+```js
+api.addEventListener('videoConferenceJoined', ({ roomName, id, displayName }) => {
+  console.log(`${displayName} (${id}) joined: ${roomName}`);
+});
+```
+
+---
+
+**`videoConferenceLeft`** — Fired when the local participant leaves the conference.
+
+| Field | Type | Description |
+|---|---|---|
+| `roomName` | `string` | The name of the room that was left |
+
+```js
+api.addEventListener('videoConferenceLeft', ({ roomName }) => {
+  console.log(`Left room: ${roomName}`);
+});
+```
+
+---
+
+**`readyToClose`** — Fired after all hangup operations complete and the iframe is safe to remove from the DOM. Listen for this event before calling `api.dispose()`.
+
+```js
+api.addEventListener('readyToClose', () => {
+  api.dispose();
+});
+```
+
+---
+
+**`subjectChange`** — Fired when the meeting subject (title) changes.
+
+| Field | Type | Description |
+|---|---|---|
+| `subject` | `string` | The new meeting subject |
+
+```js
+api.addEventListener('subjectChange', ({ subject }) => {
+  document.title = subject;
+});
+```
+
+---
+
+**`conferenceCreatedTimestamp`** — Fired with the timestamp of when the conference was created.
+
+---
+
+**`prejoinScreenLoaded`** — Fired when the pre-join screen is displayed to the user, before they enter the conference.
+
+---
+
+**`suspendDetected`** — Fired when a computer suspend/sleep event is detected by the browser.
+
+</Accordion>
+
+<Accordion title="Participants">
+
+**`participantJoined`** — Fired when a remote participant joins the conference.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | The participant's JID |
+| `displayName` | `string` | The participant's display name |
+| `formattedDisplayName` | `string` | Display name with role suffix if applicable |
+
+```js
+api.addEventListener('participantJoined', ({ id, displayName }) => {
+  console.log(`${displayName} joined (${id})`);
+});
+```
+
+---
+
+**`participantLeft`** — Fired when a remote participant leaves the conference.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | The JID of the participant who left |
+
+---
+
+**`dominantSpeakerChanged`** — Fired when the active (loudest) speaker changes.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | The JID of the new dominant speaker |
+
+```js
+api.addEventListener('dominantSpeakerChanged', ({ id }) => {
+  console.log('Now speaking:', id);
+});
+```
+
+---
+
+**`raiseHandUpdated`** — Fired when a participant raises or lowers their hand.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | The participant's JID |
+| `handRaised` | `number` | Timestamp when the hand was raised, or `0` if lowered |
+
+---
+
+**`participantRoleChanged`** — Fired when a participant's role changes (e.g. granted moderator).
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | The participant's JID |
+| `role` | `string` | New role: `'moderator'` or `'none'` |
+
+---
+
+**`displayNameChange`** — Fired when a participant changes their display name.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | The participant's JID |
+| `displayname` | `string` | The new display name |
+| `formattedDisplayName` | `string` | The new formatted display name |
+
+---
+
+**`emailChange`** — Fired when a participant updates their email address.
+
+---
+
+**`avatarChanged`** — Fired when a participant changes their avatar.
+
+---
+
+**`participantKickedOut`** — Fired when a participant is removed from the conference by a moderator.
+
+---
+
+**`participantMuted`** — Fired when a participant's mute state is changed by a moderator.
+
+</Accordion>
+
+<Accordion title="Audio and Video">
+
+**`audioMuteStatusChanged`** — Fired when the local participant's microphone mute state changes.
+
+| Field | Type | Description |
+|---|---|---|
+| `muted` | `boolean` | `true` if the microphone is now muted |
+
+```js
+api.addEventListener('audioMuteStatusChanged', ({ muted }) => {
+  document.getElementById('mic-icon').classList.toggle('muted', muted);
+});
+```
+
+---
+
+**`videoMuteStatusChanged`** — Fired when the local participant's camera state changes.
+
+| Field | Type | Description |
+|---|---|---|
+| `muted` | `boolean` | `true` if the camera is now off |
+
+---
+
+**`screenSharingStatusChanged`** — Fired when the local participant starts or stops screen sharing.
+
+| Field | Type | Description |
+|---|---|---|
+| `on` | `boolean` | `true` if screen sharing is now active |
+| `details` | `object` | Additional details about the shared source |
+
+---
+
+**`audioAvailabilityChanged`** — Fired when audio input availability changes (e.g. microphone connected/disconnected).
+
+| Field | Type | Description |
+|---|---|---|
+| `available` | `boolean` | `true` if audio input is available |
+
+---
+
+**`videoAvailabilityChanged`** — Fired when video input availability changes.
+
+| Field | Type | Description |
+|---|---|---|
+| `available` | `boolean` | `true` if a camera is available |
+
+---
+
+**`videoQualityChanged`** — Fired when the active video quality (resolution) changes.
+
+| Field | Type | Description |
+|---|---|---|
+| `videoQuality` | `number` | The new video height constraint in pixels |
+
+---
+
+**`audioOnlyChanged`** — Fired when the meeting switches into or out of audio-only mode.
+
+---
+
+**`audioOrVideoSharingToggled`** — Fired when audio or video sharing is toggled by any participant.
+
+---
+
+**`deviceListChanged`** — Fired when the list of available media devices changes (e.g. headphones plugged in).
+
+---
+
+**`cameraError`** — Fired when a camera-related error occurs (e.g. permission denied).
+
+---
+
+**`micError`** — Fired when a microphone-related error occurs.
+
+</Accordion>
+
+<Accordion title="Recording">
+
+**`recordingStatusChanged`** — Fired when a server-side recording or live stream starts or stops.
+
+| Field | Type | Description |
+|---|---|---|
+| `on` | `boolean` | `true` if recording is now active |
+| `mode` | `string` | `'file'` or `'stream'` |
+| `error` | `string` (optional) | Error message if recording failed to start |
+
+```js
+api.addEventListener('recordingStatusChanged', ({ on, mode, error }) => {
+  if (error) {
+    console.error('Recording error:', error);
+  } else {
+    console.log(`Recording (${mode}): ${on ? 'started' : 'stopped'}`);
+  }
+});
+```
+
+---
+
+**`recordingLinkAvailable`** — Fired when a download link for the recording becomes available.
+
+| Field | Type | Description |
+|---|---|---|
+| `link` | `string` | The URL to download the recording |
+| `ttl` | `number` | Time-to-live for the link in milliseconds |
+
+---
+
+**`recordingConsentDialogOpen`** — Fired when the recording consent dialog is displayed to a participant.
+
+---
+
+**`transcribingStatusChanged`** — Fired when meeting transcription starts or stops.
+
+---
+
+**`transcriptionChunkReceived`** — Fired when a new transcription chunk arrives from the speech-to-text service.
+
+</Accordion>
+
+<Accordion title="Lobby">
+
+**`knockingParticipant`** — Fired when a participant is waiting in the lobby and requests to join. Use this to build a custom admit/deny UI.
+
+| Field | Type | Description |
+|---|---|---|
+| `participant.id` | `string` | The waiting participant's ID |
+| `participant.name` | `string` | The waiting participant's display name |
+| `participant.email` | `string` | The waiting participant's email |
+| `participant.avatar` | `string` | The waiting participant's avatar URL |
+
+```js
+api.addEventListener('knockingParticipant', ({ participant }) => {
+  const admit = confirm(`${participant.name} wants to join. Admit?`);
+  api.executeCommand('answerKnockingParticipant', participant.id, admit);
+});
+```
+
+---
+
+**`lobbyStatusChanged`** — Fired when the lobby is enabled or disabled.
+
+| Field | Type | Description |
+|---|---|---|
+| `lobbyEnabled` | `boolean` | `true` if the lobby is now active |
+
+---
+
+**`passwordRequired`** — Fired when a room password is required to join.
+
+</Accordion>
+
+<Accordion title="Errors">
+
+**`errorOccurred`** — Fired when a meeting error occurs. Check `isFatal` to determine whether the meeting can continue.
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Short error identifier |
+| `type` | `string` | Error category (e.g. `'CONNECTION_ERROR'`) |
+| `details` | `object` | Additional error context |
+| `isFatal` | `boolean` | Whether the error is unrecoverable |
+
+```js
+api.addEventListener('errorOccurred', ({ name, type, isFatal }) => {
+  console.error(`[${type}] ${name} (fatal: ${isFatal})`);
+  if (isFatal) {
+    api.dispose();
+  }
+});
+```
+
+---
+
+**`peerConnectionFailure`** — Fired when the WebRTC peer connection encounters a failure.
+
+---
+
+**`browserSupport`** — Fired with information about browser WebRTC support capabilities.
+
+</Accordion>
+
+<Accordion title="Chat and Messaging">
+
+**`incomingMessage`** — Fired when a chat message is received.
+
+| Field | Type | Description |
+|---|---|---|
+| `from` | `string` | JID of the sender |
+| `nick` | `string` | Display name of the sender |
+| `message` | `string` | The message text |
+| `stamp` | `string` | ISO timestamp of the message |
+| `privateMessage` | `boolean` | `true` if this is a direct/private message |
+
+```js
+api.addEventListener('incomingMessage', ({ nick, message, privateMessage }) => {
+  console.log(`${privateMessage ? '[Private] ' : ''}${nick}: ${message}`);
+});
+```
+
+---
+
+**`outgoingMessage`** — Fired when the local participant sends a chat message.
+
+| Field | Type | Description |
+|---|---|---|
+| `message` | `string` | The message text |
+
+---
+
+**`chatUpdated`** — Fired when the chat panel opens, closes, or the unread message count changes.
+
+| Field | Type | Description |
+|---|---|---|
+| `isOpen` | `boolean` | Whether the chat panel is visible |
+| `unreadCount` | `number` | Number of unread messages |
+
+---
+
+**`endpointTextMessageReceived`** — Fired when a data channel message is received from another participant.
+
+| Field | Type | Description |
+|---|---|---|
+| `senderInfo` | `object` | `{ id, displayName }` of the sender |
+| `eventData` | `object` | The raw message payload |
+
+</Accordion>
+
+<Accordion title="Breakout Rooms">
+
+**`breakoutRoomsUpdated`** — Fired whenever the breakout room structure changes (rooms created, participants moved, rooms closed).
+
+The payload is an object mapping room JIDs to room details, each containing a `participants` map.
+
+```js
+api.addEventListener('breakoutRoomsUpdated', (data) => {
+  console.log('Rooms updated:', data);
+});
+```
+
+</Accordion>
+
+<Accordion title="Other Events">
+
+**`tileViewChanged`** — Fired when tile (grid) view is toggled.
+
+| Field | Type | Description |
+|---|---|---|
+| `enabled` | `boolean` | `true` if tile view is now active |
+
+---
+
+**`e2eeStatusChanged`** — Fired when End-to-End Encryption is enabled or disabled.
+
+| Field | Type | Description |
+|---|---|---|
+| `enabled` | `boolean` | `true` if E2EE is now active |
+
+---
+
+**`filmstripDisplayChanged`** — Fired when the filmstrip visibility changes.
+
+---
+
+**`participantsPaneToggled`** — Fired when the participants panel opens or closes.
+
+---
+
+**`toolbarButtonClicked`** — Fired when a toolbar button is clicked inside the meeting.
+
+| Field | Type | Description |
+|---|---|---|
+| `key` | `string` | The identifier of the button that was clicked |
+
+---
+
+**`toolbarVisibilityChanged`** — Fired when the meeting toolbar shows or hides.
+
+---
+
+**`whiteboardStatusChanged`** — Fired when the whiteboard is opened or closed.
+
+---
+
+**`moderationStatusChanged`** — Fired when AV moderation is turned on or off.
+
+---
+
+**`moderationParticipantApproved`** — Fired when a moderated participant is approved to unmute.
+
+---
+
+**`moderationParticipantRejected`** — Fired when a moderated participant's unmute request is rejected.
+
+---
+
+**`p2pStatusChanged`** — Fired when the call switches between P2P and JVB (SFU) modes.
+
+---
+
+**`contentSharingParticipantsChanged`** — Fired when the list of participants sharing their screen changes.
+
+---
+
+**`feedbackSubmitted`** — Fired when the post-call feedback form is submitted.
+
+---
+
+**`log`** — Fired for each log message at levels configured in `config.apiLogLevels`.
+
+| Field | Type | Description |
+|---|---|---|
+| `logLevel` | `string` | The log level (e.g. `'info'`, `'warn'`, `'error'`) |
+| `arguments` | `string[]` | The log message parts |
+
+</Accordion>

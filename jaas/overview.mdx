@@ -1,0 +1,80 @@
+---
+title: "Jitsi as a Service (JaaS): Hosted Video Conferencing"
+sidebarTitle: "Overview"
+description: "JaaS is 8x8's enterprise-grade hosted Jitsi Meet platform — fully managed infrastructure with global scalability, SLA guarantees, and no servers to maintain."
+---
+
+Jitsi as a Service (JaaS) is 8x8's enterprise-grade hosted deployment of Jitsi Meet. It provides a fully managed Jitsi infrastructure — no servers to maintain, no scaling to configure — accessible via the same IFrame API and React Native SDK you would use with any self-hosted Jitsi Meet instance. JaaS handles capacity, reliability, and upgrades on your behalf, so you can focus entirely on building your application.
+
+## Why use JaaS instead of self-hosting
+
+<CardGroup cols={2}>
+  <Card title="No Infrastructure Management" icon="server">
+    Skip provisioning, patching, and maintaining XMPP servers, coturn relays, and Jibri recording nodes. JaaS operates the full Jitsi stack so you don't have to.
+  </Card>
+  <Card title="Global Scalability" icon="globe">
+    JaaS automatically scales to handle spikes in concurrent meetings and participants across global regions, with no manual capacity planning required.
+  </Card>
+  <Card title="SLA Guarantee" icon="shield-check">
+    Enterprise-tier accounts include an uptime SLA backed by 8x8's production infrastructure, giving you contractual reliability assurances for mission-critical deployments.
+  </Card>
+  <Card title="Enterprise Support" icon="headset">
+    Access dedicated support channels, priority issue escalation, and direct engineering assistance — resources that go well beyond community-based self-hosted support.
+  </Card>
+</CardGroup>
+
+## Getting started with JaaS
+
+<Steps>
+  <Step title="Sign up for JaaS">
+    Create a free account at [https://jaas.8x8.vc](https://jaas.8x8.vc). The free tier includes a generous number of monthly meeting minutes to get you started with development and testing.
+  </Step>
+  <Step title="Create an app and generate an API key pair">
+    In the [JaaS developer console](https://jaas.8x8.vc/#/apikeys), click **Add API key** and then **Generate API key pair**. JaaS will generate an RS256 public/private key pair and display the **Key ID** assigned to it.
+  </Step>
+  <Step title="Download and store your private key">
+    Download the private key (`.pk` file) immediately from the confirmation dialog — it is not stored by JaaS and cannot be retrieved later. Transfer it securely to the server that will sign your JWT tokens.
+  </Step>
+  <Step title="Use your App ID as the domain in the IFrame API">
+    Pass `8x8.vc` as the domain and prefix your room name with your App ID. Supply a signed JWT token in the `jwt` option:
+
+    ```js
+    new JitsiMeetExternalAPI('8x8.vc', {
+      roomName: '<app-id>/<room-name>',
+      jwt: '<token>',
+    });
+    ```
+
+    Your **App ID** is displayed in the developer console. See [API Keys & JWT Token Generation](/jaas/api-keys) for full token signing instructions.
+  </Step>
+</Steps>
+
+## JaaS domain and room name format
+
+<Note>
+  Rooms on JaaS use the format `<app-id>/<room-name>`. The App ID typically carries the prefix `vpaas-magic-cookie-` (for example, `vpaas-magic-cookie-abc123`). Your full App ID is always visible in the [developer console](https://jaas.8x8.vc/#/apikeys).
+</Note>
+
+## Migrating from self-hosted Jitsi to JaaS
+
+If you already run a self-hosted Jitsi Meet server and want to move it to JaaS, the repository ships a helper script that automates the reconfiguration. After generating an API key pair in the JaaS console and copying your private key to the server, run:
+
+```bash
+sudo /usr/share/jitsi-meet/scripts/move-to-jaas.sh /my/path/test-key.pk <key_id>
+```
+
+Replace `/my/path/test-key.pk` with the path to your downloaded private key and `<key_id>` with the Key ID shown in the console. The script updates your Jitsi Meet configuration, nginx proxy settings, and token-generation hooks to route through JaaS automatically.
+
+<Note>
+  After running the migration script, you can adjust which JaaS services are enabled by editing `/etc/jitsi/meet/jaas/nginx-jaas.conf`. The section after `proxy_set_body` contains the JWT token template that will be used for all client tokens.
+</Note>
+
+## End-to-end encryption on JaaS
+
+<Note>
+  E2EE (end-to-end encryption) is **enabled by default** on JaaS. However, E2EE currently only works on Chromium-based browsers (Chrome, Edge, and other Chromium derivatives). If a participant joins from Firefox, Safari, or a mobile client, E2EE is automatically turned off for that session to preserve compatibility.
+</Note>
+
+## Next steps
+
+Now that you understand the JaaS platform, learn how to generate and sign the RS256 JWT tokens required for every meeting in [API Keys & JWT Token Generation](/jaas/api-keys).

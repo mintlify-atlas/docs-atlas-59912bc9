@@ -1,0 +1,229 @@
+---
+title: "Securing Jitsi Meet Rooms with JWT Tokens"
+sidebarTitle: "JWT Auth"
+description: "How to configure JSON Web Token authentication in Jitsi Meet to control room access, set user identity, and grant moderator privileges via signed tokens."
+---
+
+Jitsi Meet supports JSON Web Token (JWT) authentication to restrict who can create or join conference rooms. Rather than relying solely on room passwords, JWTs let your application server issue cryptographically signed tokens that carry the user's identity, which rooms they may access, and which features they are permitted to use. Tokens are validated server-side by the Prosody XMPP server using either a shared secret (HS256) or an RSA/EC public key (RS256/ES256), so they cannot be forged by clients.
+
+---
+
+## How It Works
+
+When a participant navigates to a Jitsi Meet URL or initialises the IFrame API, a JWT can be provided. The flow is:
+
+1. **Your application server** authenticates the user (via your own login system) and issues a signed JWT containing the user's name, email, permitted room, and any feature flags.
+2. **The client** passes the token to Jitsi Meet — either in the URL query string (`?jwt=…`) or as an IFrame API constructor option.
+3. **Prosody** intercepts the XMPP connection and validates the JWT signature against the configured secret or public key.
+4. If the token is valid and not expired, the room is opened and the user's identity (`context.user`) is applied to their participant entry.
+5. If the token is missing, expired, or has an invalid signature, Prosody rejects the connection.
+
+---
+
+## Token Payload Structure
+
+JWTs are Base64URL-encoded JSON. The payload section must contain the following claims:
+
+```json
+{
+  "iss": "my_app_id",
+  "sub": "jitsi-meet.example.com",
+  "aud": "jitsi",
+  "exp": 1893456000,
+  "nbf": 1700000000,
+  "room": "MyMeetingRoom",
+  "context": {
+    "user": {
+      "name": "Alice Smith",
+      "email": "alice@example.com",
+      "avatar": "https://example.com/avatars/alice.png",
+      "id": "user-123",
+      "moderator": "true"
+    },
+    "features": {
+      "recording": "true",
+      "livestreaming": "false",
+      "screen-sharing": "true",
+      "lobby": "true",
+      "moderation": "true"
+    }
+  }
+}
+```
+
+### Claim Reference
+
+<ParamField path="iss" type="string" required>
+  Issuer — identifies your application. Must match the `app_id` value configured in Prosody's `token_verification` plugin.
+</ParamField>
+
+<ParamField path="sub" type="string" required>
+  Subject — your Jitsi Meet domain, e.g. `jitsi-meet.example.com`. For JaaS this is your JaaS tenant ID (e.g. `vpaas-magic-cookie-abc123`).
+</ParamField>
+
+<ParamField path="aud" type="string" required>
+  Audience — must be `"jitsi"` for standard deployments.
+</ParamField>
+
+<ParamField path="exp" type="number" required>
+  Expiry — Unix timestamp (seconds since epoch) after which the token is rejected. Keep lifetimes short (minutes to hours) and issue fresh tokens as needed.
+</ParamField>
+
+<ParamField path="nbf" type="number">
+  Not Before — Unix timestamp before which the token is not yet valid. Useful to prevent token reuse before a scheduled meeting starts.
+</ParamField>
+
+<ParamField path="room" type="string" required>
+  The room name this token grants access to. Use `"*"` (asterisk) to create a wildcard token valid for any room on the domain. Wildcards should only be issued to trusted users (e.g. administrators).
+</ParamField>
+
+<ParamField path="context.user.name" type="string">
+  Display name shown in the participant list and tiles for this user.
+</ParamField>
+
+<ParamField path="context.user.email" type="string">
+  Email address used for Gravatar-style avatar lookups.
+</ParamField>
+
+<ParamField path="context.user.avatar" type="string">
+  Direct URL to the user's profile picture. Overrides email-based avatar lookups.
+</ParamField>
+
+<ParamField path="context.user.moderator" type="string">
+  When set to `"true"`, the user is granted moderator privileges (mute others, remove participants, end meeting for all).
+</ParamField>
+
+<ParamField path="context.features" type="object">
+  Per-user feature gate flags. All values are strings `"true"` or `"false"`. Supported keys include: `recording`, `livestreaming`, `screen-sharing`, `lobby`, `moderation`, `transcription`, `create-polls`, `send-groupchat`, `outbound-call`, `inbound-call`, `sip-outbound-call`, `sip-inbound-call`, `flip`, `file-upload`, `live-translation`.
+</ParamField>
+
+<Warning>
+  JWT validation in the browser (`react/features/base/jwt/functions.ts`) is client-side only and **does not verify the signature**. Signature verification is performed exclusively by Prosody on the server. Never rely on client-side JWT checks for security decisions.
+</Warning>
+
+---
+
+## Enable JWT Authentication in Prosody
+
+On a Jitsi self-hosted server, install and configure the `prosody-plugins` token authentication module. The relevant section in `/etc/prosody/conf.d/<domain>.cfg.lua` looks like:
+
+```lua
+VirtualHost "jitsi-meet.example.com"
+    authentication = "token"
+
+    app_id = "my_app_id"           -- must match JWT `iss` claim
+    app_secret = "my_super_secret" -- shared secret for HS256 signing
+
+    -- Optional: restrict which rooms guests can access
+    -- allow_empty_token = false
+
+Component "conference.jitsi-meet.example.com" "muc"
+    storage = "memory"
+```
+
+For RS256 / ES256 (asymmetric), replace `app_secret` with the path to your public key file:
+
+```lua
+    asap_key_server = "https://keys.example.com/asap"
+    -- or load directly:
+    -- app_key = "/etc/prosody/jwt_public.pem"
+```
+
+After editing the Prosody configuration, restart the service:
+
+```bash
+sudo systemctl restart prosody
+```
+
+---
+
+## Enable JWT Support in config.js
+
+On the Jitsi side, enable the `tokenAuthUrl` redirect flow if you want unauthenticated users to be redirected to your login service automatically:
+
+```js
+// config.js
+tokenAuthUrl:
+  'https://auth.example.com/login?room={room}&challenge={code_challenge}&state={state}',
+
+// Optional: redirect to a logout endpoint when the user leaves
+// tokenLogoutUrl: 'https://auth.example.com/logout',
+
+// For guest-domain separation, set anonymousdomain in hosts:
+hosts: {
+    domain: 'jitsi-meet.example.com',
+    muc: 'conference.jitsi-meet.example.com',
+    anonymousdomain: 'guest.jitsi-meet.example.com',
+},
+```
+
+---
+
+## Pass JWT via URL
+
+Append the token as a query parameter when linking directly to a room:
+
+```
+https://meet.example.com/MyMeetingRoom?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+The client-side parser (`parseJWTFromURLParams`) checks both the URL query string and the hash fragment, so the following also works:
+
+```
+https://meet.example.com/MyMeetingRoom#jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+---
+
+## Pass JWT to the IFrame API
+
+When embedding Jitsi Meet with the IFrame API, supply the token in the constructor options. This is the preferred approach for embedded deployments because it avoids exposing the token in the browser's address bar.
+
+```html
+<script src="https://meet.example.com/external_api.js"></script>
+<script>
+  // Fetch a fresh token from your own backend
+  const token = await fetchJwtFromYourServer({ room: 'ProjectAlpha' });
+
+  const api = new JitsiMeetExternalAPI('meet.example.com', {
+    roomName: 'ProjectAlpha',
+    parentNode: document.querySelector('#meet'),
+
+    jwt: token,   // <-- pass the signed JWT here
+
+    userInfo: {
+      displayName: 'Alice Smith',
+      email: 'alice@example.com',
+    },
+  });
+</script>
+```
+
+<Tip>
+  Always generate JWTs server-side and fetch them via an authenticated API call. Never embed your JWT signing secret in client-side JavaScript.
+</Tip>
+
+---
+
+## Feature Flags via JWT
+
+The `context.features` object in the payload maps directly to the `MEET_FEATURES` constants in the Jitsi codebase. Each flag is a string (`"true"` / `"false"`) because the JWT payload is a plain JSON object. Some commonly used feature flags:
+
+| Feature key | Effect when `"true"` |
+|---|---|
+| `recording` | User can start/stop cloud recordings |
+| `livestreaming` | User can start YouTube Live streams |
+| `screen-sharing` | User may share their screen |
+| `lobby` | User can enable/disable lobby mode |
+| `moderation` | User can moderate other participants |
+| `transcription` | User can request live captions |
+| `create-polls` | User can create polls in the meeting |
+| `send-groupchat` | User can send messages in group chat |
+
+---
+
+## JaaS (Jitsi as a Service) Tokens
+
+<Note>
+  If you are using **JaaS (8x8 Jitsi as a Service)**, token generation is different. The `sub` claim must contain your JaaS App ID (in `vpaas-magic-cookie-*` format), and tokens must be signed with the private key downloaded from your JaaS dashboard. See the [JaaS API Keys guide](/jaas/api-keys) for full instructions.
+</Note>

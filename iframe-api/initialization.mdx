@@ -1,0 +1,154 @@
+---
+title: "Initializing the Jitsi IFrame API Constructor"
+sidebarTitle: "Initialization"
+description: "Learn how to load external_api.js and configure the JitsiMeetExternalAPI constructor to embed and customize a Jitsi meeting iframe."
+---
+
+The `JitsiMeetExternalAPI` constructor creates and embeds a Jitsi meeting iframe directly into your web page. It accepts a required domain string and a rich options object that controls the room name, iframe dimensions, user identity, authentication tokens, and conference configuration.
+
+## Loading the Script
+
+Before you can instantiate the API, include `external_api.js` from your Jitsi server in your HTML. Both a public CDN and a self-hosted server are supported.
+
+```html
+<!-- From the public meet.jit.si server (good for development) -->
+<script src="https://meet.jit.si/external_api.js"></script>
+
+<!-- From your own self-hosted Jitsi server -->
+<script src="https://your-jitsi-domain.com/external_api.js"></script>
+```
+
+<Note>
+  The script must be loaded from the same Jitsi server that will host the meeting. The `external_api.js` file originates from the server so it can communicate with the iframe over `postMessage` with a matching origin.
+</Note>
+
+## Constructor Signature
+
+```js
+const api = new JitsiMeetExternalAPI(domain, options);
+```
+
+## Constructor Parameters
+
+<ParamField path="domain" type="string" required>
+  The hostname of the Jitsi server that will host the conference. For example, `'meet.jit.si'` or `'8x8.vc'`. Do not include the `https://` protocol prefix.
+</ParamField>
+
+<ParamField path="options.roomName" type="string">
+  The name of the conference room to join or create. If omitted, Jitsi Meet will display the room selection screen. Room names are case-insensitive and must not contain spaces.
+</ParamField>
+
+<ParamField path="options.width" type="number | string">
+  Width of the embedded iframe. A plain number is treated as pixels (e.g. `700`). You may also pass a CSS string such as `'100%'`, `'80vw'`, or `'40em'`. Defaults to `'100%'`.
+</ParamField>
+
+<ParamField path="options.height" type="number | string">
+  Height of the embedded iframe. Accepts the same formats as `width`. Defaults to `'100%'`.
+</ParamField>
+
+<ParamField path="options.parentNode" type="HTMLElement">
+  The DOM element that the iframe will be appended to. Defaults to `document.body` when not specified.
+</ParamField>
+
+<ParamField path="options.configOverwrite" type="object">
+  An object containing `config.js` options to override at runtime. These take precedence over the server's default configuration. For example, `{ startWithAudioMuted: true, prejoinPageEnabled: false }`.
+</ParamField>
+
+<ParamField path="options.interfaceConfigOverwrite" type="object">
+  An object containing `interface_config.js` overrides. Controls toolbar buttons, branding, and other UI elements. Note that many `interface_config` options are deprecated in favour of `configOverwrite`.
+</ParamField>
+
+<ParamField path="options.jwt" type="string">
+  A JSON Web Token for authenticated rooms. Required when the Jitsi server has token-based authentication enabled. The token encodes the room name, user identity, and permission scopes.
+</ParamField>
+
+<ParamField path="options.userInfo" type="object">
+  An object containing information about the local participant before they join. Accepted fields: `displayName` (string) and `email` (string).
+</ParamField>
+
+<ParamField path="options.lang" type="string">
+  The two-letter BCP-47 language code for the meeting UI. For example, `'en'`, `'fr'`, `'de'`, or `'es'`. Overrides the server's default locale.
+</ParamField>
+
+<ParamField path="options.devices" type="object">
+  Pre-selected audio and video devices to use when joining. Pass device objects with `deviceId` and `label` matching available media devices.
+</ParamField>
+
+<ParamField path="options.onload" type="function">
+  A callback function that fires when the iframe finishes loading. Equivalent to the `load` event on the iframe element. Internally this is triggered by the `ready` event from the meeting.
+</ParamField>
+
+<ParamField path="options.invitees" type="Array<object>">
+  An array of invitee objects to call immediately when the room opens. Each object should contain the information needed to reach the invitee (e.g. phone number for SIP/PSTN).
+</ParamField>
+
+<ParamField path="options.e2eeKey" type="string">
+  A hex-encoded key used to enable End-to-End Encryption from the moment the participant joins. This option is experimental and may be removed in a future release.
+</ParamField>
+
+## Complete Initialization Example
+
+The example below shows a comprehensive setup with config overrides, pre-filled user info, a JWT, and event listeners attached immediately after construction.
+
+```js
+const container = document.getElementById('meet-container');
+
+const api = new JitsiMeetExternalAPI('meet.jit.si', {
+  roomName: 'TeamStandup',
+  width: '100%',
+  height: 600,
+  parentNode: container,
+
+  // Override server config.js values at runtime
+  configOverwrite: {
+    startWithAudioMuted: true,
+    startWithVideoMuted: false,
+    prejoinPageEnabled: false,
+    disableDeepLinking: true
+  },
+
+  // Pre-fill the local participant's identity
+  userInfo: {
+    displayName: 'Alice Example',
+    email: 'alice@example.com'
+  },
+
+  // JWT for authenticated rooms (obtain from your auth server)
+  jwt: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
+
+  // Set the UI language to French
+  lang: 'fr',
+
+  // Callback when the iframe is ready
+  onload: () => console.log('Jitsi iframe loaded')
+});
+
+// Attach event listeners after construction
+api.addEventListener('videoConferenceJoined', ({ roomName, displayName }) => {
+  console.log(`${displayName} joined room: ${roomName}`);
+});
+
+api.addEventListener('videoConferenceLeft', () => {
+  api.dispose();
+});
+```
+
+## Cleaning Up
+
+Call `api.dispose()` when you want to tear down the meeting. This removes the iframe from the DOM and unregisters all internal event listeners and transport connections.
+
+```js
+// Clean up the meeting when navigating away
+window.addEventListener('beforeunload', () => {
+  api.dispose();
+});
+
+// Or dispose on a button click
+document.getElementById('leave-btn').addEventListener('click', () => {
+  api.dispose();
+});
+```
+
+<Warning>
+  Always call `dispose()` when the meeting is no longer needed. Failing to do so leaves the iframe in the DOM and keeps the transport layer active, which may cause memory leaks in long-lived single-page applications.
+</Warning>

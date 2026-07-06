@@ -1,0 +1,57 @@
+---
+title: "React Native SDK for Jitsi Meet Conferencing"
+sidebarTitle: "Overview"
+description: "Embed a full-featured Jitsi Meet video conference into any iOS or Android app using the @jitsi/react-native-sdk React component."
+---
+
+The `@jitsi/react-native-sdk` package brings the full Jitsi Meet video conferencing experience to iOS and Android apps. It exports a single React component — `JitsiMeeting` — that renders a complete conference UI within your app, handling all media, signaling, and UI concerns so you can focus on your product rather than WebRTC internals.
+
+## Platform Support
+
+<CardGroup cols={2}>
+  <Card title="iOS" icon="apple">
+    Supports iOS **13 and above**. Requires Camera and Microphone usage descriptions in `Info.plist` and the relevant Background Modes capability enabled.
+  </Card>
+  <Card title="Android" icon="android">
+    Requires `minSdkVersion` **26** (Android 8.0 Oreo) or higher, and `gradlePluginVersion` **8.4.2** or higher in your build configuration.
+  </Card>
+</CardGroup>
+
+## What's Included
+
+The SDK embeds the full Jitsi Meet feature set — no features are stripped from the native component. Out of the box you get:
+
+- **HD video and audio** — adaptive bitrate video conferencing powered by `react-native-webrtc`
+- **In-conference chat** — text messaging with all participants during a call
+- **Reactions** — emoji raise-hand and reaction bar
+- **Breakout rooms** — split participants into smaller sub-rooms mid-conference
+- **Lobby** — waiting room for participants before a moderator admits them
+- **End-to-End Encryption (E2EE)** — optional end-to-end encrypted sessions
+- **Screen sharing** — share your device screen with other participants (Android requires additional setup)
+- **Virtual backgrounds** — blur or replace your camera background
+- **JWT authentication** — pass a signed token via the `token` prop to authenticate users against your Jitsi server
+
+## Architecture
+
+The SDK embeds the full Jitsi Meet React Native app as a single component. It relies on `react-native-webrtc` for all real-time media (audio capture, video capture, peer connections, and screen sharing) and on `lib-jitsi-meet` for XMPP/BOSH signaling, room management, and conference control. Navigation within the conference is handled by `@react-navigation/native` stack. Your host app simply mounts `<JitsiMeeting />` with props and optionally holds a `ref` for imperative control — all internal state is self-contained.
+
+<Note>
+  Because the SDK ships the full Jitsi Meet app internally, its bundle size is significant. Plan accordingly when evaluating it for size-constrained projects.
+</Note>
+
+## Quick Links
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/react-native-sdk/installation">
+    Install the package, run the dependency helper, and configure native build settings for iOS and Android.
+  </Card>
+  <Card title="Usage" icon="code" href="/react-native-sdk/usage">
+    Render a conference with minimal props or wire up the full ref API and event listeners.
+  </Card>
+  <Card title="Reference" icon="book" href="/react-native-sdk/reference">
+    Complete API reference for `IAppProps`, `JitsiRefProps`, and `IEventListeners`.
+  </Card>
+  <Card title="Sample App" icon="github" href="https://github.com/jitsi/jitsi-meet-sdk-samples/tree/master/react-native">
+    Browse the official React Native SDK sample app on GitHub.
+  </Card>
+</CardGroup>

@@ -1,0 +1,158 @@
+---
+title: "Installing the Jitsi React Native SDK"
+sidebarTitle: "Installation"
+description: "Step-by-step guide to installing @jitsi/react-native-sdk, running the dependency helper, and configuring iOS and Android native build settings."
+---
+
+Installing `@jitsi/react-native-sdk` requires installing the package itself, running the dependency helper script, and configuring native build settings for both iOS and Android. The SDK ships with a large number of peer dependencies — the helper script ensures your project has everything it needs before you touch native code.
+
+## Install the Package
+
+Add `@jitsi/react-native-sdk` to your project using your preferred package manager:
+
+<CodeGroup>
+```bash npm
+npm install @jitsi/react-native-sdk
+```
+
+```bash yarn
+yarn add @jitsi/react-native-sdk
+```
+
+```bash pnpm
+pnpm add @jitsi/react-native-sdk
+```
+</CodeGroup>
+
+<Note>
+  If you encounter peer dependency conflicts, add `--legacy-peer-deps` (npm) or `--force` (npm/yarn) to resolve them. For example: `npm install @jitsi/react-native-sdk --legacy-peer-deps`.
+</Note>
+
+## Run the Dependency Helper
+
+The SDK ships a helper script that inspects your project's current dependencies and installs any missing required peer dependencies automatically. Run it immediately after installing the package:
+
+```bash
+node node_modules/@jitsi/react-native-sdk/update_dependencies.js
+```
+
+After the script completes, run `npm install` (or your package manager's install command) once more if the script reported that any dependency versions were updated.
+
+<Tip>
+  The `postinstall` lifecycle hook in the SDK package will remind you to run this script every time you install the package. Don't skip it — missing peer dependencies like `react-native-webrtc` or `react-native-svg` will cause runtime crashes.
+</Tip>
+
+## Configure Metro
+
+Because the SDK uses SVG assets internally, you must update your project's `metro.config.js` to handle `.svg` files via `react-native-svg-transformer`. Without this change, Metro will fail to bundle SVG imports.
+
+```js metro.config.js
+const { getDefaultConfig } = require('metro-config');
+
+module.exports = (async () => {
+  const {
+    resolver: { sourceExts, assetExts }
+  } = await getDefaultConfig();
+
+  return {
+    transformer: {
+      babelTransformerPath: require.resolve('react-native-svg-transformer'),
+      getTransformOptions: async () => ({
+        transform: {
+          experimentalImportSupport: false,
+          inlineRequires: true,
+        },
+      }),
+    },
+    resolver: {
+      assetExts: assetExts.filter(ext => ext !== 'svg'),
+      sourceExts: [...sourceExts, 'svg']
+    }
+  };
+})();
+```
+
+## iOS Setup
+
+<Steps>
+  <Step title="Add usage descriptions to Info.plist">
+    Open your project's `ios/<AppName>/Info.plist` and add the following keys. Without these, iOS will crash when the SDK first requests camera or microphone access:
+
+    ```xml ios/<AppName>/Info.plist
+    <key>NSCameraUsageDescription</key>
+    <string>$(PRODUCT_NAME) needs camera access for video conferencing.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>$(PRODUCT_NAME) needs microphone access for audio conferencing.</string>
+    ```
+  </Step>
+  <Step title="Enable Background Modes capability">
+    In Xcode, navigate to your target's **Signing & Capabilities** tab, click **+ Capability**, and add **Background Modes**. Then enable the following three modes:
+
+    - **Audio, AirPlay and Picture in Picture** — keeps audio active when the app is backgrounded
+    - **Voice over IP** — maintains VoIP connections in the background
+    - **Background fetch** — allows the SDK to perform background updates
+  </Step>
+  <Step title="Install CocoaPods dependencies">
+    Run `pod install` to link the native dependencies added by the SDK's peer packages:
+
+    ```bash
+    cd ios && pod install && cd ..
+    ```
+  </Step>
+</Steps>
+
+## Android Setup
+
+<Steps>
+  <Step title="Set minimum SDK version">
+    Open `android/build.gradle` and ensure `minSdkVersion` is at least **26** (Android 8.0 Oreo). The SDK uses APIs that are unavailable on older versions:
+
+    ```groovy android/build.gradle
+    buildscript {
+        ext {
+            minSdkVersion = 26
+            gradlePluginVersion = "8.4.2"
+            // ...
+        }
+    }
+    ```
+  </Step>
+  <Step title="Set minimum Gradle plugin version">
+    In the same `android/build.gradle`, ensure `gradlePluginVersion` is **8.4.2** or higher, as shown above.
+  </Step>
+  <Step title="Add required permissions">
+    Add the following permissions to both `android/app/src/debug/AndroidManifest.xml` and `android/app/src/main/AndroidManifest.xml`, outside the `<application>` tag:
+
+    ```xml AndroidManifest.xml
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    ```
+  </Step>
+  <Step title="Configure screen sharing (optional)">
+    If you want to enable screen sharing, additional setup is required in both Java and the manifest.
+
+    In `MainApplication.java`, add:
+
+    ```java MainApplication.java
+    import com.oney.WebRTCModule.WebRTCModuleOptions;
+
+    // Inside onCreate():
+    WebRTCModuleOptions options = WebRTCModuleOptions.getInstance();
+    options.enableMediaProjectionService = true;
+    ```
+
+    Then add the foreground service permissions and the service declaration to `android/app/src/main/AndroidManifest.xml`:
+
+    ```xml AndroidManifest.xml
+    <!-- Permissions (outside <application>) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    ```
+
+    <Warning>
+      Screen sharing on Android requires API level 29+ for the `FOREGROUND_SERVICE_MEDIA_PROJECTION` permission type. Devices running Android 8 (API 26–28) support the foreground service but not media projection-specific permission declarations — test on your target API range.
+    </Warning>
+  </Step>
+</Steps>

@@ -1,0 +1,111 @@
+---
+title: "Breakout Rooms: Split Participants into Sub-Sessions"
+sidebarTitle: "Breakout Rooms"
+description: "Create and manage breakout rooms in Jitsi Meet to split participants into focused sub-sessions, with full IFrame API control and real-time updates."
+---
+
+Breakout rooms allow moderators to split conference participants into separate sub-sessions that run in parallel within the same meeting. Each breakout room is an independent conference with its own audio and video space — participants in one room cannot see or hear those in another. When breakout sessions end, all participants return to the main room automatically.
+
+## How to Use Breakout Rooms
+
+<Steps>
+  <Step title="Open the Participants pane">
+    Click the **Participants** icon in the toolbar (or press `Alt+P`) to open the Participants panel on the right side of the screen.
+  </Step>
+  <Step title="Open the Breakout Rooms section">
+    At the bottom of the Participants pane, click **Breakout Rooms** to expand the breakout room controls. This section is only visible to moderators.
+  </Step>
+  <Step title="Create a breakout room">
+    Click **Add Breakout Room** to create a new sub-session. Rooms are named automatically (e.g., "Breakout Room 1") or you can provide a custom name.
+  </Step>
+  <Step title="Assign participants">
+    Drag participants from the main list into a breakout room, or click **Auto Assign** to distribute everyone evenly across existing rooms. Participants can also be moved individually using the action menu next to their name.
+  </Step>
+  <Step title="Close breakout rooms">
+    Click **Close Breakout Rooms** to end all sub-sessions and return every participant to the main conference.
+  </Step>
+</Steps>
+
+## IFrame API Commands
+
+All breakout room commands require moderator privileges on the local participant. Commands dispatched without moderator rights will be silently rejected.
+
+```js
+const api = new JitsiMeetExternalAPI(domain, options);
+
+// Create a new breakout room with an optional display name
+api.executeCommand('addBreakoutRoom', 'Team Alpha');
+
+// Remove a breakout room by its JID
+api.executeCommand('removeBreakoutRoom', 'roomjid@conference.example.com');
+
+// Auto-distribute all participants across existing breakout rooms
+api.executeCommand('autoAssignToBreakoutRooms');
+
+// Move a specific remote participant to a room (moderator only)
+api.executeCommand('sendParticipantToRoom', participantId, roomId);
+
+// Move the local participant to a specific room
+api.executeCommand('moveToRoom', roomId);
+
+// Close a specific breakout room and return its participants to the main room
+api.executeCommand('closeBreakoutRoom', roomId);
+```
+
+| Command | Parameters | Description |
+|---|---|---|
+| `addBreakoutRoom` | `name: string` | Creates a new breakout room with the given display name |
+| `removeBreakoutRoom` | `breakoutRoomJid: string` | Permanently removes the specified room |
+| `autoAssignToBreakoutRooms` | — | Evenly distributes all participants across existing rooms |
+| `sendParticipantToRoom` | `participantId, roomId` | Moves a remote participant to the target room |
+| `moveToRoom` | `roomId` | Moves the local participant to the target room |
+| `closeBreakoutRoom` | `roomId` | Closes a room and returns its members to the main conference |
+
+## Breakout Room Events
+
+Subscribe to `breakoutRoomsUpdated` to keep your embedding application in sync with the current room state.
+
+```js
+api.addListener('breakoutRoomsUpdated', ({ rooms }) => {
+  console.log('Breakout room state updated:', rooms);
+  rooms.forEach(room => {
+    console.log(`Room: ${room.name}, participants: ${room.participants?.length ?? 0}`);
+  });
+});
+```
+
+The event fires whenever a room is created, removed, or whenever participants move between rooms.
+
+## Retrieving Current Room State
+
+Use `getRoomsInfo()` to synchronously fetch a snapshot of all rooms and their current participants — useful for building a custom rooms UI or tracking occupancy.
+
+```js
+api.getRoomsInfo().then(({ rooms }) => {
+  const mainRoom = rooms.find(r => r.isMainRoom);
+  const breakouts = rooms.filter(r => !r.isMainRoom);
+
+  console.log(`Main room participants: ${mainRoom.participants.length}`);
+  breakouts.forEach(room => {
+    console.log(`${room.name}: ${room.participants.length} participant(s)`);
+  });
+});
+```
+
+Each room object in the response contains:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | Unique room identifier (JID) |
+| `name` | `string` | Display name of the room |
+| `isMainRoom` | `boolean` | `true` for the main conference room |
+| `participants` | `array` | List of participant objects currently in this room |
+
+## Limitations
+
+<Note>
+  - Only **moderators** can create, remove, or assign participants to breakout rooms. Participants can voluntarily move to a room when invited.
+  - Breakout rooms require a Prosody deployment with the `muc_breakout_rooms` plugin enabled. Self-hosted deployments must configure this explicitly.
+  - On **JaaS (8x8.vc)**, the maximum number of active breakout rooms per meeting may be subject to your plan limits.
+  - Breakout rooms are not persisted — they are destroyed when the meeting ends.
+</Note>

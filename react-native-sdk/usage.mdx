@@ -1,0 +1,149 @@
+---
+title: "Using the JitsiMeeting Component in React Native"
+sidebarTitle: "Usage"
+description: "Learn how to render a Jitsi Meet conference with JitsiMeeting, handle event listeners, and use the imperative ref API for programmatic control."
+---
+
+Once installed, you use the `JitsiMeeting` component to render a conference. Pass it a `room`, `serverURL`, optional `config`, `token`, `userInfo`, and `eventListeners` props, and hold a ref for imperative control. The component is self-contained — it manages all conference state internally and surfaces lifecycle events through callbacks you provide.
+
+## Minimal Example
+
+The simplest working usage requires only a `room` name and a `style` prop. The `serverURL` defaults to the public `meet.jit.si` server if omitted:
+
+```tsx
+import { JitsiMeeting } from '@jitsi/react-native-sdk';
+
+export default function ConferenceScreen() {
+  return (
+    <JitsiMeeting
+      room="MyTestRoom"
+      serverURL="https://meet.jit.si"
+      style={{ flex: 1 }}
+    />
+  );
+}
+```
+
+<Note>
+  The `JitsiMeeting` component fills its parent container. Wrapping it in a `View` with `flex: 1` or explicit dimensions is required — rendering it without a defined size will produce a blank screen.
+</Note>
+
+## Full Example with Ref and Event Listeners
+
+For production usage you will almost always want a `ref` for imperative control (e.g. programmatically hanging up) and `eventListeners` to react to conference lifecycle events. The example below shows all common patterns together:
+
+```tsx
+import React, { useRef } from 'react';
+import { Button, View } from 'react-native';
+import { JitsiMeeting, JitsiRefProps } from '@jitsi/react-native-sdk';
+
+export default function ConferenceScreen() {
+  const jitsiRef = useRef<JitsiRefProps>(null);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <JitsiMeeting
+        ref={jitsiRef}
+        room="MyRoom"
+        serverURL="https://meet.jit.si"
+        token="your-jwt-token"
+        userInfo={{
+          displayName: 'Alice',
+          email: 'alice@example.com',
+          avatarURL: ''
+        }}
+        config={{ startWithAudioMuted: true }}
+        eventListeners={{
+          onConferenceJoined: () => console.log('Joined conference'),
+          onConferenceLeft: () => console.log('Left conference'),
+          onConferenceWillJoin: () => console.log('About to join conference'),
+          onParticipantJoined: ({ id }) => console.log('Participant joined:', id),
+          onParticipantLeft: ({ id }) => console.log('Participant left:', id),
+          onAudioMutedChanged: ({ muted }) => console.log('Audio muted:', muted),
+          onVideoMutedChanged: ({ muted }) => console.log('Video muted:', muted),
+          onReadyToClose: () => console.log('SDK ready to unmount'),
+          onEnterPictureInPicture: () => console.log('Entered PiP mode'),
+          onConferenceBlurred: () => console.log('Conference lost focus'),
+          onConferenceFocused: () => console.log('Conference gained focus'),
+          onEndpointMessageReceived: (message) => console.log('Data channel message:', message)
+        }}
+        style={{ flex: 1 }}
+      />
+      <Button
+        title="Hang Up"
+        onPress={() => jitsiRef.current?.close()}
+      />
+    </View>
+  );
+}
+```
+
+## Imperative Methods via Ref
+
+Holding a `ref` to `JitsiMeeting` gives you programmatic control over the running conference through the `JitsiRefProps` interface. All methods dispatch Redux actions into the embedded conference store.
+
+| Method | Description |
+|---|---|
+| `close()` | Navigates away from the conference, effectively ending it for the local user. Equivalent to pressing the hang-up button. |
+| `setAudioMuted(muted: boolean)` | Mutes (`true`) or unmutes (`false`) the local participant's microphone. |
+| `setVideoMuted(muted: boolean)` | Disables (`true`) or enables (`false`) the local participant's camera. |
+| `setAudioOnly(value: boolean)` | Switches the conference into audio-only mode (`true`) or back to video mode (`false`). |
+| `getRoomsInfo()` | Returns the current breakout room state as an `IRoomsInfo` object, including all rooms and their participants. |
+
+```tsx
+// Example: hang up when the user navigates away
+useEffect(() => {
+  return () => {
+    jitsiRef.current?.close();
+  };
+}, []);
+
+// Example: mute audio conditionally
+const handleMuteToggle = (shouldMute: boolean) => {
+  jitsiRef.current?.setAudioMuted(shouldMute);
+};
+
+// Example: inspect breakout rooms
+const handleRoomsCheck = async () => {
+  const rooms = jitsiRef.current?.getRoomsInfo();
+  console.log('Current rooms:', rooms);
+};
+```
+
+<Warning>
+  All ref methods access the conference's internal Redux store. Calling them before the conference has fully joined (i.e., before `onConferenceJoined` fires) may have no effect or throw. Guard calls with a joined state flag in your component.
+</Warning>
+
+## Using a Full Room URL
+
+Instead of passing a room name and `serverURL` separately, you can supply a complete conference URL in the `room` prop. The SDK detects the presence of `://` and treats the value as an absolute URL, ignoring `serverURL` entirely.
+
+<Tip>
+  Pass a full URL in `room` when you need to target a specific server path or when constructing deep links: `room="https://meet.jit.si/MyRoom"`. This is equivalent to setting `room="MyRoom"` and `serverURL="https://meet.jit.si"`.
+</Tip>
+
+## Adding Custom Toolbar Buttons
+
+You can inject custom buttons into the overflow menu by passing a `customToolbarButtons` array inside the `config` prop. Each button requires an `icon` URL, a unique `id`, and a `text` label:
+
+```tsx
+<JitsiMeeting
+  room="MyRoom"
+  serverURL="https://meet.jit.si"
+  config={{
+    customToolbarButtons: [
+      {
+        icon: 'https://example.com/icons/record.png',
+        id: 'btn-record',
+        text: 'Start Recording'
+      },
+      {
+        icon: 'https://example.com/icons/share.png',
+        id: 'btn-share',
+        text: 'Share Link'
+      }
+    ]
+  }}
+  style={{ flex: 1 }}
+/>
+```

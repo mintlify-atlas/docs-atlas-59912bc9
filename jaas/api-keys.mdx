@@ -1,0 +1,129 @@
+---
+title: "JaaS API Keys and JWT Token Generation"
+sidebarTitle: "API Keys"
+description: "Learn how to generate JaaS RS256 API key pairs, structure JWT payloads, and sign tokens server-side to authenticate Jitsi Meet meetings on JaaS."
+---
+
+JaaS uses RS256 JWT tokens signed with your private API key to authenticate meetings. Every JaaS meeting request requires a valid token containing your App ID, the target room name, and a user context that describes the participant's identity and feature permissions. Tokens must always be signed server-side — never in the browser — and should carry a short expiry to limit the blast radius of any credential exposure.
+
+## Generating an API key pair
+
+<Steps>
+  <Step title="Log into the JaaS API keys console">
+    Navigate to [https://jaas.8x8.vc/#/apikeys](https://jaas.8x8.vc/#/apikeys) and sign in with your JaaS account.
+  </Step>
+  <Step title="Create a new API key">
+    Click **Add API key**, then select **Generate API key pair**. JaaS will generate a 2048-bit RSA key pair on your behalf and register the public key with the platform.
+  </Step>
+  <Step title="Download and securely store the private key">
+    Download the private key (`.pk` file) from the confirmation dialog immediately — JaaS does **not** retain a copy. Store it in a secrets manager or a vault, never in source control. Transfer it securely to the server that will sign tokens.
+  </Step>
+  <Step title="Record the Key ID">
+    Note the **Key ID** displayed next to your new key in the console. You will embed this value in the `kid` header field of every JWT token you sign with that key.
+  </Step>
+</Steps>
+
+## JWT token structure
+
+A JaaS JWT payload carries your App ID in the `sub` claim, the target room in `room`, and a `context` object describing the user and the features they are permitted to use. A wildcard (`"*"`) in `room` authorises the token for any room under your App ID.
+
+```json
+{
+  "iss": "chat",
+  "aud": "jitsi",
+  "sub": "<your-app-id>.8x8.vc",
+  "exp": 1700000000,
+  "nbf": 1699999000,
+  "room": "*",
+  "context": {
+    "user": {
+      "moderator": "true",
+      "name": "Alice",
+      "email": "alice@example.com",
+      "avatar": "",
+      "id": "user-123"
+    },
+    "features": {
+      "recording": "true",
+      "livestreaming": "true",
+      "transcription": "true",
+      "outbound-call": "true"
+    }
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `iss` | Always `"chat"` for JaaS tokens. |
+| `aud` | Always `"jitsi"` for JaaS tokens. |
+| `sub` | Your full JaaS domain: `<app-id>.8x8.vc`. |
+| `exp` | Unix timestamp after which the token is invalid. |
+| `nbf` | Unix timestamp before which the token is not yet valid. |
+| `room` | Specific room name or `"*"` for any room under your App ID. |
+| `context.user.moderator` | `"true"` grants the participant moderator privileges. |
+| `context.features.*` | Enable or disable specific JaaS features for this participant. |
+
+## Signing the token
+
+Use any RS256-capable JWT library to sign your payload with the private key. The example below uses the popular [`jsonwebtoken`](https://www.npmjs.com/package/jsonwebtoken) package for Node.js.
+
+```js
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+const privateKey = fs.readFileSync('./jaas-private-key.pk');
+
+const payload = {
+  iss: 'chat',
+  aud: 'jitsi',
+  sub: 'vpaas-magic-cookie-<your-app-id>.8x8.vc',
+  exp: Math.floor(Date.now() / 1000) + 3600,  // 1 hour from now
+  nbf: Math.floor(Date.now() / 1000) - 10,    // valid 10s ago (clock skew buffer)
+  room: '*',
+  context: {
+    user: {
+      moderator: 'true',
+      name: 'Alice',
+      email: 'alice@example.com',
+      id: 'user-123',
+    },
+  },
+};
+
+const token = jwt.sign(payload, privateKey, {
+  algorithm: 'RS256',
+  keyid: '<your-key-id>',
+});
+```
+
+<Tip>
+  Replace `vpaas-magic-cookie-<your-app-id>` with the full App ID shown in the JaaS developer console (it always starts with the `vpaas-magic-cookie-` prefix), and `<your-key-id>` with the Key ID you noted when creating the API key.
+</Tip>
+
+## Using the token in the IFrame API
+
+Pass the signed token directly to `JitsiMeetExternalAPI` via the `jwt` option. Combine it with the `8x8.vc` domain and the `<app-id>/<room>` room name format:
+
+```js
+new JitsiMeetExternalAPI('8x8.vc', {
+  roomName: 'vpaas-magic-cookie-<your-app-id>/<room-name>',
+  jwt: token,
+});
+```
+
+The token is validated server-side by JaaS on every meeting join. An expired, malformed, or incorrectly signed token will result in the participant being denied entry.
+
+## Token security tips
+
+<Warning>
+  **Never generate or sign JWT tokens client-side in the browser.** Doing so would expose your private key to every end user, allowing anyone to mint arbitrary tokens with moderator privileges or any feature set. Always sign tokens in a trusted server-side environment and deliver the resulting token string to the client. Tokens should carry a short expiry — one hour or less — so that a leaked token has a limited window of validity.
+</Warning>
+
+## Further reading
+
+For more detail on JaaS API key management, token format extensions, and advanced feature flags, refer to the official JaaS developer documentation:
+
+- [JaaS API Keys & JWT — developer.8x8.com](https://developer.8x8.com/jaas/docs/api-keys-jwt)
+
+You can also revisit the platform overview in [Jitsi as a Service (JaaS): Hosted Video Conferencing](/jaas/overview) for migration and setup guidance.

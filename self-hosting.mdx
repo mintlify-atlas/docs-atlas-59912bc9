@@ -1,0 +1,223 @@
+---
+title: "Self-Hosting Jitsi Meet on Your Own Server"
+sidebarTitle: "Self-Hosting"
+description: "Deploy Jitsi Meet on your own infrastructure using official Debian packages or Docker Compose. Full control over branding, data, and configuration."
+---
+
+Self-hosting Jitsi Meet gives you complete control over your video conferencing infrastructure — your data stays on your servers, you can apply custom branding, and you can tune every configuration parameter to fit your organisation's needs. Jitsi provides two well-supported paths: **Debian/Ubuntu packages** for bare-metal or VM installs, and a **Docker Compose** stack for container-based environments. This guide walks you through both, along with post-install configuration steps to get your instance production-ready.
+
+---
+
+## Prerequisites
+
+Before you begin, make sure your server and network environment meet the following requirements:
+
+- **Operating system:** Ubuntu 22.04 LTS or Debian 11 (Bullseye) / Debian 12 (Bookworm). Other distros are possible but unsupported by the official packages.
+- **Domain name:** A fully-qualified domain name (e.g. `meet.example.com`) pointed at your server's public IP via an A record. Let's Encrypt requires a valid public domain.
+- **Open ports:** The following ports must be reachable from the internet:
+
+  | Port | Protocol | Purpose |
+  |------|----------|---------|
+  | 80 | TCP | Let's Encrypt HTTP challenge |
+  | 443 | TCP | HTTPS web traffic |
+  | 4443 | TCP | Jitsi Videobridge fallback (TCP tunnelling) |
+  | 10000 | UDP | Jitsi Videobridge media (RTP/RTCP) |
+
+- **Memory:** 4 GB RAM minimum recommended. 8 GB+ for calls with more than ~30 concurrent participants.
+- **Root or sudo access** on the server.
+
+<Warning>
+  Port **10000/UDP** is the primary media port for Jitsi Videobridge. If it is blocked by a firewall, calls will fall back to TCP tunnelling on port 4443, which significantly increases latency. Always open 10000/UDP if possible.
+</Warning>
+
+---
+
+## Debian / Ubuntu Quick Install
+
+<Steps>
+  ### Add the Jitsi APT Repository
+
+  Import the Jitsi GPG signing key and add the stable package repository:
+
+  ```bash
+  # Import the signing key
+  curl https://download.jitsi.org/jitsi-key.gpg.key \
+    | gpg --dearmor \
+    > /usr/share/keyrings/jitsi-keyring.gpg
+
+  # Add the Jitsi stable repository
+  echo "deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] \
+    https://download.jitsi.org stable/" \
+    | tee /etc/apt/sources.list.d/jitsi-stable.list
+
+  # Update your package index
+  apt-get update
+  ```
+
+  ### Install Jitsi Meet
+
+  Install the `jitsi-meet` meta-package, which pulls in Jitsi Videobridge, Jicofo, Prosody, the web app, and an Nginx virtual-host configuration automatically:
+
+  ```bash
+  apt-get install -y jitsi-meet
+  ```
+
+  During installation you will be prompted for:
+  1. **Hostname** — enter your fully-qualified domain name (e.g. `meet.example.com`).
+  2. **TLS certificate** — choose *"Generate a new self-signed certificate"* for now; you will replace it in the next step.
+
+  <Note>
+    The installer configures Nginx, Prosody, Jicofo, and Jitsi Videobridge automatically. All four services will be running as `systemd` units after installation completes.
+  </Note>
+
+  ### Obtain a Let's Encrypt TLS Certificate
+
+  Jitsi ships a helper script that requests a free Let's Encrypt certificate and reconfigures Nginx to use it:
+
+  ```bash
+  /usr/share/jitsi-meet/scripts/install-letsencrypt-cert.sh
+  ```
+
+  The script will ask for an email address for certificate renewal notifications. Make sure ports 80 and 443 are reachable before running it.
+
+  ### Verify Your Instance
+
+  Open a browser and navigate to `https://your-domain`. You should see the Jitsi Meet welcome page. Click **Start a meeting** to confirm audio and video work end-to-end.
+
+  ```
+  https://meet.example.com
+  ```
+
+  If the page loads but calls fail, check that port 10000/UDP is open in your firewall (`ufw allow 10000/udp` on Ubuntu).
+</Steps>
+
+---
+
+## Docker Deployment
+
+<Note>
+  The official Docker setup for Jitsi Meet lives in a **separate repository**: [github.com/jitsi/docker-jitsi-meet](https://github.com/jitsi/docker-jitsi-meet). It provides a production-ready `docker-compose.yml` with all four components pre-configured and environment-variable-driven configuration.
+</Note>
+
+A minimal Docker deployment looks like this:
+
+```bash
+# Clone the Docker repo
+git clone https://github.com/jitsi/docker-jitsi-meet
+cd docker-jitsi-meet
+
+# Copy the example environment file and edit it
+cp env.example .env
+# Set PUBLIC_URL, LETSENCRYPT_EMAIL, HTTP_PORT, HTTPS_PORT, etc.
+$EDITOR .env
+
+# Create the local config directories
+mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
+
+# Start all services
+docker compose up -d
+```
+
+```yaml
+# Excerpt from docker-compose.yml (illustrative — use the upstream file)
+services:
+  web:
+    image: jitsi/web:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ~/.jitsi-meet-cfg/web:/config
+    env_file: .env
+
+  prosody:
+    image: jitsi/prosody:latest
+    volumes:
+      - ~/.jitsi-meet-cfg/prosody:/config
+    env_file: .env
+
+  jicofo:
+    image: jitsi/jicofo:latest
+    volumes:
+      - ~/.jitsi-meet-cfg/jicofo:/config
+    env_file: .env
+
+  jvb:
+    image: jitsi/jvb:latest
+    ports:
+      - "10000:10000/udp"
+      - "4443:4443"
+    volumes:
+      - ~/.jitsi-meet-cfg/jvb:/config
+    env_file: .env
+```
+
+Refer to the [docker-jitsi-meet README](https://github.com/jitsi/docker-jitsi-meet#readme) for the full list of `.env` variables, TLS setup instructions, and scaling guidance.
+
+---
+
+## Post-Install Configuration
+
+After installation, your instance's main configuration file is located at:
+
+```
+/etc/jitsi/meet/<your-domain>-config.js
+```
+
+This file is served directly to browsers as the runtime configuration object. You can override any option documented in [config.js](https://github.com/jitsi/jitsi-meet/blob/master/config.js). Common post-install changes include enabling JWT authentication, adjusting bitrate caps, and disabling features you don't need.
+
+```bash
+# Open the config file in your editor
+nano /etc/jitsi/meet/meet.example.com-config.js
+```
+
+A few commonly modified options:
+
+```javascript
+// /etc/jitsi/meet/meet.example.com-config.js (excerpt)
+var config = {
+  // Require authentication before users can create rooms
+  // requireDisplayName: true,
+
+  // Enable End-to-End Encryption toggle in the UI
+  e2eeLabels: {
+    e2ee: 'End-to-end Encryption',
+  },
+
+  // Limit resolution to reduce server load
+  constraints: {
+    video: {
+      height: { ideal: 720, max: 720, min: 180 },
+    },
+  },
+};
+```
+
+After editing the config or any systemd unit file, restart the Jitsi services:
+
+```bash
+systemctl restart jitsi-videobridge2 prosody jicofo
+```
+
+<Tip>
+  You can verify all services are running with `systemctl status jitsi-videobridge2 prosody jicofo nginx`. Check `/var/log/jitsi/` for detailed logs from each component.
+</Tip>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="config.js Reference" icon="file-code" href="/configuration/config-js">
+    Browse every available option in the Jitsi Meet runtime configuration file, with explanations and defaults.
+  </Card>
+  <Card title="JWT Authentication" icon="key" href="/configuration/jwt-auth">
+    Restrict room creation and enforce participant identity using JSON Web Tokens with Prosody's token auth module.
+  </Card>
+  <Card title="Security Hardening" icon="shield" href="/configuration/security">
+    Enable lobby mode, require passwords, configure CSP headers, and lock down your deployment for production.
+  </Card>
+  <Card title="JaaS Overview" icon="building" href="/jaas/overview">
+    Skip the ops burden entirely — 8x8 Jitsi as a Service runs Jitsi on a global infrastructure with SLA guarantees and enterprise support.
+  </Card>
+</CardGroup>

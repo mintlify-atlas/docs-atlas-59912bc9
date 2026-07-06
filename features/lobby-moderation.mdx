@@ -1,0 +1,151 @@
+---
+title: "Lobby Mode and AV Moderation in Jitsi Meet"
+sidebarTitle: "Lobby & Moderation"
+description: "Control meeting access with Lobby knock-to-join and AV Moderation tools in Jitsi Meet, including IFrame API commands and moderator privilege details."
+---
+
+Jitsi Meet provides two complementary moderation tools — the **Lobby** (a knock-to-join waiting room) and **AV Moderation** (per-participant audio and video control). Lobby mode gates entry to the meeting, ensuring only approved attendees can join, while AV Moderation gives moderators ongoing control over what participants can broadcast during the session. Both features require moderator privileges to activate.
+
+## Lobby Mode
+
+### How It Works
+
+When Lobby mode is enabled, participants who arrive at the meeting are placed in a virtual waiting room instead of joining directly. Each waiting participant must **knock** — they send a join request that only moderators can see. Moderators receive a notification for each knock and can **approve** or **deny** each request individually. Approved participants join the main conference; denied participants are redirected away from the meeting.
+
+### Enable via the UI
+
+1. Open the **Security** options panel (shield icon in the toolbar).
+2. Toggle **Enable Lobby** to on.
+3. A visual indicator appears in the toolbar to confirm Lobby mode is active.
+
+### IFrame API Commands
+
+```js
+const api = new JitsiMeetExternalAPI(domain, options);
+
+// Enable lobby mode
+api.executeCommand('toggleLobby', true);
+
+// Disable lobby mode
+api.executeCommand('toggleLobby', false);
+
+// Approve a knocking participant (moderator only)
+api.executeCommand('answerKnockingParticipant', participantId, true);
+
+// Deny a knocking participant (moderator only)
+api.executeCommand('answerKnockingParticipant', participantId, false);
+```
+
+### Lobby Events
+
+Subscribe to `knockingParticipant` to be notified in real time whenever someone knocks. This allows embedding applications to build custom approval UIs.
+
+```js
+api.addListener('knockingParticipant', ({ participant }) => {
+  console.log('Participant knocking:', participant.name, participant.id);
+
+  // Example: auto-approve participants whose name starts with "VIP"
+  if (participant.name?.startsWith('VIP')) {
+    api.executeCommand('answerKnockingParticipant', participant.id, true);
+  }
+});
+```
+
+The `participant` payload includes:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `string` | The knocking participant's session ID |
+| `name` | `string` | Display name provided by the participant |
+| `email` | `string` | Email address if provided (may be empty) |
+
+---
+
+## AV Moderation
+
+### How It Works
+
+AV Moderation allows moderators to forcibly mute any participant's audio or video at any time. Muted participants can request to unmute (which generates an "asked to unmute" notification for them), but they cannot override the moderator's mute state without moderator approval in strict moderation mode.
+
+### Muting Commands
+
+```js
+// Mute all participants' audio (moderator is excluded automatically)
+api.executeCommand('muteEveryone', 'audio');
+
+// Mute all participants' video
+api.executeCommand('muteEveryone', 'video');
+
+// Mute a specific remote participant's audio
+api.executeCommand('muteRemoteParticipant', participantId, 'audio');
+
+// Mute a specific remote participant's video
+api.executeCommand('muteRemoteParticipant', participantId, 'video');
+```
+
+<Note>
+  `muteEveryone` automatically excludes the moderator who issues the command. The `muteRemoteParticipant` command can also target the local participant by passing the local participant's ID — in that case it toggles the local audio or video mute state directly.
+</Note>
+
+### AV Moderation Events
+
+Listen for mute state changes to keep your embedding application in sync with participant audio/video status.
+
+```js
+api.addListener('audioMuteStatusChanged', ({ muted }) => {
+  console.log('Local audio is now', muted ? 'muted' : 'unmuted');
+});
+
+api.addListener('videoMuteStatusChanged', ({ muted }) => {
+  console.log('Local video is now', muted ? 'muted' : 'unmuted');
+});
+```
+
+---
+
+## Moderator Privileges
+
+Moderator status determines who can use Lobby and AV Moderation controls. Jitsi assigns moderation rights through the following mechanisms:
+
+<Tabs>
+  <Tab title="First Participant">
+    By default (without authentication), the **first participant to join** a meeting is granted moderator rights automatically. If the moderator leaves, moderator rights are passed to the next eligible participant.
+  </Tab>
+  <Tab title="JWT Token">
+    When using token-based authentication, moderator status is granted via the JWT claim:
+    ```json
+    {
+      "context": {
+        "user": {
+          "moderator": true,
+          "name": "Alice",
+          "email": "alice@example.com"
+        }
+      }
+    }
+    ```
+    Only participants whose token includes `"moderator": true` receive moderation privileges, regardless of join order.
+  </Tab>
+  <Tab title="Grant Moderator">
+    An existing moderator can promote any participant to moderator during the meeting:
+    ```js
+    // Grant moderator rights to a participant
+    api.executeCommand('grantModerator', participantId);
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Require Display Name
+
+<Tip>
+  Set `requireDisplayName: true` in `config.js` to force all participants to enter a display name before joining. This is especially useful in combination with Lobby mode — it ensures moderators can identify who is knocking before approving or denying their request.
+
+  ```js
+  // config.js
+  requireDisplayName: true
+  ```
+
+  Participants who attempt to join without a name will be prompted to enter one on the prejoin screen before they can knock on the lobby.
+</Tip>

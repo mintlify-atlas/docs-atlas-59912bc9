@@ -1,0 +1,288 @@
+---
+title: "Jitsi Meet config.js Reference Guide"
+sidebarTitle: "config.js"
+description: "Complete reference for Jitsi Meet's config.js — covering connection, P2P, video quality, toolbar, prejoin, and feature flag settings for self-hosted deployments."
+---
+
+`config.js` is the primary server-side configuration file loaded by every Jitsi Meet instance on page load. On a standard Debian/Ubuntu installation it lives at `/etc/jitsi/meet/<your-domain>-config.js`. The file exports a single `config` object whose properties control everything from XMPP connection details and codec preferences to which toolbar buttons appear in the UI. Changes take effect immediately on the next page load — no server restart is required.
+
+## Connection Settings
+
+These options define how the browser connects to the Jitsi backend services (Prosody XMPP, Jicofo, and the Jitsi Videobridge).
+
+<ParamField path="hosts.domain" type="string" required>
+  Your primary XMPP domain. This must match the domain configured in Prosody. Example: `jitsi-meet.example.com`.
+</ParamField>
+
+<ParamField path="hosts.muc" type="string">
+  The XMPP MUC (Multi-User Chat) domain used for conference rooms. Defaults to `conference.<domain>`. Example: `conference.jitsi-meet.example.com`.
+</ParamField>
+
+<ParamField path="hosts.anonymousdomain" type="string">
+  When token-based authentication is enabled, unauthenticated guests are assigned to this domain. Example: `guest.jitsi-meet.example.com`.
+</ParamField>
+
+<ParamField path="bosh" type="string">
+  The BOSH (Bidirectional-streams Over Synchronous HTTP) URL for XMPP-over-HTTP connections. Example: `https://jitsi-meet.example.com/http-bind`.
+</ParamField>
+
+<ParamField path="websocket" type="string">
+  The WebSocket URL for the XMPP connection. Preferred over BOSH when both are configured because it has lower overhead and better performance. Example: `wss://jitsi-meet.example.com/xmpp-websocket`.
+</ParamField>
+
+<Tip>
+  Set `websocket` and leave `bosh` as a fallback. WebSocket connections are more efficient and reduce latency compared to long-polling BOSH connections.
+</Tip>
+
+---
+
+## Peer-to-Peer Settings
+
+When only two participants are in a room, Jitsi Meet can establish a direct WebRTC connection between them, bypassing the Jitsi Videobridge entirely. This reduces server load and often improves call quality.
+
+<ParamField path="p2p.enabled" type="boolean" default="true">
+  Enables or disables peer-to-peer mode. When `true`, a direct connection is attempted whenever exactly two participants are present. A third participant joining will automatically move everyone back to the JVB.
+</ParamField>
+
+<ParamField path="p2p.stunServers" type="array">
+  Array of STUN server objects used during P2P ICE negotiation. Each entry must have a `urls` field. Example: `[{ urls: 'stun:meet-jit-si-turnrelay.jitsi.net:443' }]`.
+</ParamField>
+
+<ParamField path="p2p.iceTransportPolicy" type="string" default="all">
+  Controls which ICE candidate types are used for the P2P connection. Valid values from the WebRTC spec are `"all"` and `"relay"`. Set to `"relay"` to force TURN usage (useful in restrictive firewalls).
+</ParamField>
+
+```js
+p2p: {
+    enabled: true,
+    iceTransportPolicy: 'all',
+    stunServers: [
+        { urls: 'stun:meet-jit-si-turnrelay.jitsi.net:443' },
+    ],
+},
+```
+
+---
+
+## Prejoin Page
+
+The prejoin page gives participants a chance to configure their camera and microphone before entering a meeting.
+
+<ParamField path="prejoinConfig.enabled" type="boolean" default="true">
+  When `true`, an intermediate configuration screen is shown before a participant joins the call, allowing them to select audio/video devices and set their display name.
+</ParamField>
+
+<ParamField path="prejoinConfig.hideDisplayName" type="boolean" default="false">
+  Hides the display name input field on the prejoin screen. If `requireDisplayName` is also `true`, a name must still be supplied via JWT or the IFrame API `userInfo` option.
+</ParamField>
+
+<ParamField path="prejoinConfig.hideExtraJoinButtons" type="array">
+  List of extra join option buttons to hide from the dropdown. Possible values: `'no-audio'`, `'by-phone'`.
+</ParamField>
+
+<ParamField path="prejoinConfig.preCallTestEnabled" type="boolean" default="false">
+  Enables a pre-call network test on the prejoin page. Requires `preCallTestICEUrl` to also be set.
+</ParamField>
+
+---
+
+## Toolbar Buttons
+
+The `toolbarButtons` array controls exactly which buttons appear in the meeting toolbar. When the option is `undefined` (the default), all available buttons are shown.
+
+<ParamField path="toolbarButtons" type="array">
+  An explicit allow-list of toolbar button identifiers. Only the listed buttons will be rendered. Omitting this option (leaving it `undefined`) displays every available button.
+
+  **All available button identifiers:**
+  `camera`, `chat`, `closedcaptions`, `desktop`, `download`, `embedmeeting`, `etherpad`, `feedback`, `fullscreen`, `hangup`, `help`, `highlight`, `invite`, `linktosalesforce`, `livestreaming`, `microphone`, `noisesuppression`, `participants-pane`, `profile`, `raisehand`, `recording`, `security`, `select-background`, `settings`, `shareaudio`, `sharedvideo`, `shortcuts`, `stats`, `tileview`, `toggle-camera`, `videoquality`, `whiteboard`
+</ParamField>
+
+<Tip>
+  Reorder the buttons in the main toolbar by changing the order of entries inside `toolbarButtons`. The `'desktop'` key controls the "Share your screen" button.
+</Tip>
+
+```js
+// Minimal toolbar — just the essentials
+toolbarButtons: [
+    'microphone',
+    'camera',
+    'desktop',
+    'chat',
+    'participants-pane',
+    'raisehand',
+    'tileview',
+    'hangup',
+],
+```
+
+---
+
+## Video Quality
+
+<Tabs>
+  <Tab title="videoQuality Object">
+    The `videoQuality` object lets you control codec preferences and per-codec bitrate caps for each quality level.
+
+    <ParamField path="videoQuality.codecPreferenceOrder" type="array">
+      Ordered list of preferred video codecs for desktop endpoints. The first codec in the list is tried first. Example: `['AV1', 'VP9', 'VP8', 'H264']`.
+    </ParamField>
+
+    <ParamField path="videoQuality.mobileCodecPreferenceOrder" type="array">
+      Ordered list of preferred codecs for mobile and React Native endpoints. Example: `['VP8', 'VP9', 'H264', 'AV1']`.
+    </ParamField>
+
+    <ParamField path="videoQuality.enableAdaptiveMode" type="boolean" default="false">
+      When enabled, the client makes runtime codec and resolution adjustments when WebRTC statistics report CPU overuse on outbound video streams.
+    </ParamField>
+
+    Each codec (`av1`, `vp8`, `vp9`, `h264`) accepts a `maxBitratesVideo` object with keys `low`, `standard`, `high`, `fullHd`, `ultraHd`, and `ssHigh` (all in bits per second):
+
+    ```js
+    videoQuality: {
+        codecPreferenceOrder: ['VP9', 'VP8', 'H264'],
+        vp9: {
+            maxBitratesVideo: {
+                low:      100000,
+                standard: 300000,
+                high:     1200000,
+                fullHd:   2500000,
+                ultraHd:  5000000,
+                ssHigh:   2500000,
+            },
+            scalabilityModeEnabled: true,
+            useSimulcast: false,
+            useKSVC: true,
+        },
+    },
+    ```
+  </Tab>
+  <Tab title="constraints Object">
+    The `constraints` object provides W3C-spec getUserMedia constraints for video capture and is independent of the `resolution` setting.
+
+    <ParamField path="constraints.video.height.ideal" type="number" default="720">
+      Ideal capture height in pixels. The browser will try to match this resolution but may fall back if hardware doesn't support it.
+    </ParamField>
+
+    <ParamField path="constraints.video.height.max" type="number">
+      Maximum capture height in pixels.
+    </ParamField>
+
+    <ParamField path="constraints.video.height.min" type="number">
+      Minimum capture height in pixels.
+    </ParamField>
+
+    ```js
+    constraints: {
+        video: {
+            height: {
+                ideal: 720,
+                max: 720,
+                min: 240,
+            },
+        },
+    },
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Feature Flags
+
+<ParamField path="disableThirdPartyRequests" type="boolean" default="false">
+  When `true`, no requests are made to external servers. Avatars fall back to locally-generated identicons and external analytics/stats integrations are disabled. Useful for air-gapped or privacy-strict deployments.
+</ParamField>
+
+<ParamField path="disableReactions" type="boolean" default="false">
+  Disables the emoji reactions feature for all participants.
+</ParamField>
+
+<ParamField path="disablePolls" type="boolean" default="false">
+  Removes the polls feature from the UI entirely.
+</ParamField>
+
+<ParamField path="disableChat" type="boolean" default="false">
+  Disables the chat panel, including notifications, sounds, and private messages.
+</ParamField>
+
+<ParamField path="disableSelfView" type="boolean" default="false">
+  Hides the local self-view tile from both tile view and the filmstrip.
+</ParamField>
+
+<ParamField path="requireDisplayName" type="boolean" default="false">
+  Forces every participant to provide a display name before joining. When combined with `prejoinConfig.hideDisplayName: false`, the name field is prominently shown on the prejoin screen.
+</ParamField>
+
+<ParamField path="enableInsecureRoomNameWarning" type="boolean" default="false">
+  Displays a warning label when the room name is considered easy to guess and no password or lobby is active.
+</ParamField>
+
+<ParamField path="roomPasswordNumberOfDigits" type="number | false" default="false">
+  When set to a number, restricts room passwords to that many numeric digits. Useful for phone dial-in scenarios.
+</ParamField>
+
+---
+
+## Minimal Production Config Example
+
+The following snippet shows a complete minimal `config.js` suitable for a self-hosted production server. Replace every occurrence of `jitsi-meet.example.com` with your actual domain.
+
+```js
+var config = {
+    hosts: {
+        domain: 'jitsi-meet.example.com',
+        muc: 'conference.jitsi-meet.example.com',
+    },
+
+    bosh: 'https://jitsi-meet.example.com/http-bind',
+    websocket: 'wss://jitsi-meet.example.com/xmpp-websocket',
+
+    // Show prejoin screen so users can check devices first
+    prejoinConfig: {
+        enabled: true,
+        hideDisplayName: false,
+    },
+
+    // Require a name before joining
+    requireDisplayName: true,
+
+    // Warn when room name is too simple and no protection is set
+    enableInsecureRoomNameWarning: true,
+
+    // Peer-to-peer for 1:1 calls
+    p2p: {
+        enabled: true,
+        stunServers: [
+            { urls: 'stun:jitsi-meet.example.com:3478' },
+        ],
+    },
+
+    // Limit toolbar to a focused set of controls
+    toolbarButtons: [
+        'microphone',
+        'camera',
+        'desktop',
+        'chat',
+        'participants-pane',
+        'security',
+        'raisehand',
+        'tileview',
+        'hangup',
+    ],
+
+    // Video quality targets
+    videoQuality: {
+        codecPreferenceOrder: ['VP9', 'VP8', 'H264'],
+    },
+
+    constraints: {
+        video: {
+            height: { ideal: 720, max: 720, min: 240 },
+        },
+    },
+};
+```
+
+<Note>
+  After editing `config.js`, no Jitsi service restart is necessary. Simply reload the browser page to pick up the new settings.
+</Note>

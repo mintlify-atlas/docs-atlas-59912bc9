@@ -1,0 +1,90 @@
+---
+title: "Jitsi Meet: Open-Source WebRTC Video Conferencing"
+sidebarTitle: "Introduction"
+description: "Jitsi Meet is a free, Apache 2.0-licensed WebRTC platform for HD video calls. Deploy it yourself, embed it, or use the hosted meet.jit.si service."
+---
+
+Jitsi Meet is an open-source, WebRTC-based video conferencing platform developed and maintained by the Jitsi team at 8x8. It powers everything from quick browser-based meetings on [meet.jit.si](https://meet.jit.si) to fully self-hosted enterprise deployments, and can be embedded directly into any web or mobile application via its IFrame API. This page covers what Jitsi Meet is, how its core components fit together, and the deployment paths available to you.
+
+---
+
+## Architecture Overview
+
+Jitsi Meet is not a single application — it is a suite of cooperating open-source projects. Understanding the role each component plays helps you plan deployments, debug issues, and scale confidently.
+
+<CardGroup cols={2}>
+  <Card title="Jitsi Meet Web App" icon="browser">
+    The React/TypeScript single-page application users interact with in the browser. Handles the UI, local media capture, and communicates with the other components over WebRTC and XMPP/Jingle.
+  </Card>
+  <Card title="Jitsi Videobridge (JVB)" icon="network-wired">
+    A high-performance Selective Forwarding Unit (SFU) written in Java. Routes media streams between participants without decoding them, enabling scalable multi-party calls with minimal server CPU overhead.
+  </Card>
+  <Card title="Prosody" icon="comments">
+    An XMPP server that handles all signaling between clients and conference components. Jitsi Meet uses Prosody for presence, MUC (multi-user chat) rooms, and authentication via XMPP.
+  </Card>
+  <Card title="Jicofo" icon="circle-nodes">
+    The Jitsi Conference Focus component, also written in Java. Acts as the MUC moderator, orchestrates session setup between participants and JVB, and manages conference lifecycle events.
+  </Card>
+</CardGroup>
+
+When a user joins a room, their browser connects to Prosody over a WebSocket (XMPP), Jicofo coordinates the session, and media flows directly to and from Jitsi Videobridge — never through Jicofo itself.
+
+---
+
+## Deployment Options
+
+Jitsi Meet gives you several paths to get up and running, from zero-configuration hosted services to full on-premises deployments.
+
+<CardGroup cols={2}>
+  <Card title="meet.jit.si (Free Hosted)" icon="cloud" href="https://meet.jit.si">
+    The public instance run by the Jitsi team at 8x8. Free to use for any meeting, supports all browsers, and requires no account to join. Ideal for trying out features or low-stakes meetings.
+  </Card>
+  <Card title="Self-Hosted (Debian / Docker)" icon="server" href="/self-hosting">
+    Install Jitsi Meet on your own server using official Debian packages or a Docker Compose stack. You retain full control over data, branding, and configuration.
+  </Card>
+  <Card title="JaaS — Jitsi as a Service" icon="building" href="https://jaas.8x8.vc">
+    8x8's enterprise-grade hosted platform built on Jitsi Meet. Provides monitoring, scaling, JWT authentication, and SLA guarantees — without the operational overhead of self-hosting.
+  </Card>
+  <Card title="Embed via IFrame API" icon="code" href="/quickstart">
+    Drop a `<script>` tag into any web page and launch a fully functional meeting inside an iframe with a few lines of JavaScript. Supports deep customisation through `configOverwrite` and event listeners.
+  </Card>
+</CardGroup>
+
+---
+
+## Key Features
+
+<CardGroup cols={3}>
+  <Card title="HD Audio & Video" icon="video">
+    Adaptive bitrate WebRTC media with simulcast and bandwidth estimation for smooth calls on any connection.
+  </Card>
+  <Card title="End-to-End Encryption" icon="lock">
+    Opt-in E2EE using the WebRTC Insertable Streams API so media is encrypted before it leaves the browser, even on SFU deployments.
+  </Card>
+  <Card title="Recording & Livestreaming" icon="circle-dot">
+    Record meetings to a local disk or an S3-compatible bucket via Jibri, or stream directly to YouTube Live and similar RTMP endpoints.
+  </Card>
+  <Card title="Breakout Rooms" icon="door-open">
+    Split participants into smaller sub-rooms during a conference and bring everyone back with a single moderator action.
+  </Card>
+  <Card title="Virtual Backgrounds" icon="image">
+    Browser-based background blur and image replacement powered by TensorFlow.js — no plugin required.
+  </Card>
+  <Card title="Lobby & Moderation" icon="shield-halved">
+    Hold participants in a waiting room before admission, mute everyone, remove disruptive users, and grant or revoke moderator privileges at runtime.
+  </Card>
+</CardGroup>
+
+---
+
+## Technology Stack
+
+Jitsi Meet is built on open web standards. The client application is written in **React** and **TypeScript**, bundled with Webpack, and uses the browser's native **WebRTC** APIs for audio/video capture and transmission. Signaling between clients and the server follows the **Jingle** protocol (an XMPP extension for session management), transported over **WebSockets** to the Prosody XMPP server. On the media plane, **Jitsi Videobridge** implements an SFU that forwards RTP streams between participants using DTLS-SRTP for encryption. Mobile clients are available as native **React Native** applications for iOS and Android, sharing significant logic with the web app through a common SDK.
+
+---
+
+## Open-Source License
+
+<Note>
+  Jitsi Meet and all of its core components (Jitsi Videobridge, Jicofo, Jitsi Meet web app) are released under the **Apache License 2.0**. You are free to use, modify, and distribute the software — including in commercial products — without royalty. Contributions back to the project are always welcome; see the [contributing guidelines](https://github.com/jitsi/jitsi-meet/blob/master/CONTRIBUTING.md) on GitHub.
+</Note>

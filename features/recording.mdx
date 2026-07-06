@@ -1,0 +1,182 @@
+---
+title: "Recording Meetings in Jitsi Meet"
+sidebarTitle: "Recording"
+description: "Record Jitsi meetings locally in the browser or server-side via Jibri, with support for Dropbox, file storage, and live RTMP streaming."
+---
+
+Jitsi Meet supports two distinct recording approaches: **local recording**, which captures your meeting directly in the browser without any server infrastructure, and **server-side recording** powered by Jibri, which handles file storage and live RTMP streaming. Recordings can be saved to a local file, uploaded to Dropbox, or streamed to platforms like YouTube Live. The method you choose depends on your deployment capabilities and your participants' needs.
+
+## Recording Types
+
+<Tabs>
+  <Tab title="Local Recording">
+    Local recording runs entirely in the participant's browser — no Jibri server or backend is required. The resulting file (WebM or MP4, depending on the browser) is saved directly to the participant's device.
+
+    **Characteristics:**
+    - No server-side setup needed
+    - Records only what the local participant sees and hears
+    - Output saved as a WebM/MP4 file on the local machine
+    - Can be scoped to self-only via the `onlySelf` flag
+
+    **IFrame API commands:**
+    ```js
+    // Start local recording (all participants' streams)
+    api.executeCommand('startRecording', { mode: 'local' });
+
+    // Start local recording (self only)
+    api.executeCommand('startRecording', { mode: 'local', onlySelf: true });
+
+    // Stop local recording
+    api.executeCommand('stopRecording', 'local');
+    ```
+
+    <Note>
+      Local recording availability depends on browser support. Use `supportsLocalRecording()` at runtime to check compatibility before invoking these commands.
+    </Note>
+  </Tab>
+
+  <Tab title="Server-Side (Jibri)">
+    Server-side recording requires a [Jibri](https://github.com/jitsi/jibri) instance connected to your Jitsi deployment. Jibri joins the conference as a hidden participant, captures the full meeting, and either writes it to a file or streams it over RTMP.
+
+    **Characteristics:**
+    - Requires a running Jibri server
+    - Records all participants' audio and video as a single composed stream
+    - Supports both file recording and live RTMP streaming (YouTube Live, custom RTMP endpoints)
+    - Must be enabled via `recordingService.enabled: true` in `config.js`
+
+    **IFrame API commands:**
+    ```js
+    // Start server-side file recording
+    api.executeCommand('startRecording', {
+      mode: 'file'
+    });
+
+    // Start live RTMP stream
+    api.executeCommand('startRecording', {
+      mode: 'stream',
+      rtmpStreamKey: 'your-rtmp-stream-key',
+      rtmpBroadcastID: 'optional-broadcast-id'
+    });
+
+    // Start YouTube Live stream
+    api.executeCommand('startRecording', {
+      mode: 'stream',
+      youtubeStreamKey: 'your-youtube-stream-key',
+      youtubeBroadcastID: 'optional-broadcast-id'
+    });
+
+    // Stop file recording
+    api.executeCommand('stopRecording', 'file');
+
+    // Stop live stream
+    api.executeCommand('stopRecording', 'stream');
+    ```
+  </Tab>
+
+  <Tab title="Dropbox">
+    Dropbox recording is a variant of server-side file recording that uploads the finished file directly to a participant's Dropbox account. It requires OAuth integration configured in your deployment.
+
+    **Characteristics:**
+    - Requires `dropbox.appKey` set in `config.js`
+    - The participant must grant OAuth access before recording begins
+    - A valid `dropboxToken` is passed at recording start time
+
+    **IFrame API command:**
+    ```js
+    // Start recording and upload to Dropbox
+    api.executeCommand('startRecording', {
+      mode: 'file',
+      dropboxToken: 'user-oauth-token'
+    });
+    ```
+
+    **config.js setup:**
+    ```js
+    dropbox: {
+      appKey: 'your-dropbox-app-key',
+      redirectURI: 'https://your-domain.example.com/static/oauth.html'
+    }
+    ```
+
+    <Warning>
+      If `dropbox.appKey` is not configured in `config.js`, any attempt to start a Dropbox recording via the API will be rejected with an error logged to the console.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## IFrame API Control
+
+The following snippet demonstrates the full lifecycle of a server-side file recording using the Jitsi IFrame API, including error handling via the `recording-status-changed` event.
+
+```js
+const api = new JitsiMeetExternalAPI(domain, options);
+
+// Start server-side recording
+api.executeCommand('startRecording', {
+  mode: 'file',
+  dropboxToken: 'optional-token'  // omit to use the default recording service
+});
+
+// Stop recording
+api.executeCommand('stopRecording', 'file');
+```
+
+## Recording Events
+
+Subscribe to `recording-status-changed` to react to recording state transitions in your embedding application.
+
+```js
+api.addListener('recordingStatusChanged', ({ on, mode, error, transcription }) => {
+  if (error) {
+    console.error(`Recording error in mode "${mode}":`, error);
+    return;
+  }
+  console.log(`Recording (${mode}) is now ${on ? 'active' : 'stopped'}`);
+});
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `on` | `boolean` | `true` when recording starts, `false` when it stops |
+| `mode` | `'file' \| 'stream' \| 'local'` | The recording mode that changed state |
+| `error` | `string \| null` | Error identifier if the state change was caused by a failure |
+| `transcription` | `boolean` | `true` if the event also involves a transcription session |
+
+## Configuration Options
+
+The following `config.js` fields control recording feature availability:
+
+```js
+// config.js
+
+// Enable server-side file recording via Jibri
+recordingService: {
+  enabled: true,
+  sharingEnabled: false,  // whether to share the recording link in chat
+  hideStorageWarning: false
+},
+
+// Enable live streaming to RTMP / YouTube
+liveStreaming: {
+  enabled: true,
+  validatorRegExpString: 'youtube\\.com\\/live_stream\\?stream='
+},
+
+// Dropbox OAuth integration
+dropbox: {
+  appKey: 'your-dropbox-app-key'
+},
+
+// Local recording settings
+localRecording: {
+  disable: false,     // set true to hide local recording from the UI
+  notifyAllParticipants: false  // notify others when local recording starts
+}
+```
+
+<Accordion title="Which recording mode should I choose?">
+  - **Local recording** — best for small meetings or situations where you have no server infrastructure. Quality depends on the participant's hardware and browser.
+  - **Jibri file recording** — best for archiving meetings reliably on the server side. Requires Jibri setup and storage configuration.
+  - **Jibri streaming** — best for broadcasting live to YouTube or a custom RTMP endpoint.
+  - **Dropbox** — best when participants need recordings delivered directly to their Dropbox without server storage on your side.
+</Accordion>

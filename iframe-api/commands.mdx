@@ -1,0 +1,574 @@
+---
+title: "Jitsi IFrame API Command Reference"
+sidebarTitle: "Commands"
+description: "Full reference for all Jitsi IFrame API commands. Control audio, video, recording, participants, breakout rooms, and UI from your host page."
+---
+
+Commands let you control a Jitsi meeting programmatically from the host page. Call `api.executeCommand(commandName, ...arguments)` to trigger any of the supported actions inside the embedded iframe. Commands are fire-and-forget — they send a `postMessage` to the iframe and return immediately.
+
+## Usage
+
+```js
+// Single command with no arguments
+api.executeCommand('toggleAudio');
+
+// Command with arguments
+api.executeCommand('setVideoQuality', 720);
+
+// Execute multiple commands at once
+api.executeCommands({
+  displayName: 'Alice',
+  subject: 'Weekly Sync'
+});
+```
+
+<Note>
+  Command names are camelCase strings. Passing an unrecognised command name logs a console error and has no effect. Call `api.getSupportedCommands()` to get a full list of available commands at runtime.
+</Note>
+
+## All Commands
+
+<Accordion title="Audio and Video Controls">
+
+**`toggleAudio`** — Toggle the local participant's microphone mute state. No arguments.
+
+```js
+api.executeCommand('toggleAudio');
+```
+
+---
+
+**`toggleVideo`** — Toggle the local participant's camera on or off. No arguments.
+
+```js
+api.executeCommand('toggleVideo');
+```
+
+---
+
+**`muteEveryone(mediaType)`** — Mute all participants in the conference. Requires moderator privileges.
+
+| Argument | Type | Description |
+|---|---|---|
+| `mediaType` | `string` | `'audio'` or `'video'` |
+
+```js
+api.executeCommand('muteEveryone', 'audio');
+api.executeCommand('muteEveryone', 'video');
+```
+
+---
+
+**`setVideoQuality(height)`** — Set the maximum outgoing video resolution in pixels.
+
+| Argument | Type | Description |
+|---|---|---|
+| `height` | `number` | Target height, e.g. `180`, `360`, `480`, `720`, `1080` |
+
+```js
+api.executeCommand('setVideoQuality', 720);
+```
+
+---
+
+**`toggleShareScreen`** — Start or stop local screen sharing. No arguments.
+
+```js
+api.executeCommand('toggleShareScreen');
+```
+
+---
+
+**`setAudioOnly(enabled)`** — Force the meeting into audio-only mode.
+
+```js
+api.executeCommand('setAudioOnly', true);
+```
+
+---
+
+**`toggleNoiseSuppression`** — Toggle background noise suppression. No arguments.
+
+```js
+api.executeCommand('toggleNoiseSuppression');
+```
+
+</Accordion>
+
+<Accordion title="Meeting Controls">
+
+**`hangup`** — Disconnect the local participant from the conference. No arguments.
+
+```js
+api.executeCommand('hangup');
+```
+
+---
+
+**`endConference`** — End the conference for all participants. Requires moderator privileges. No arguments.
+
+```js
+api.executeCommand('endConference');
+```
+
+---
+
+**`toggleLobby(enabled)`** — Enable or disable the lobby (waiting room) for the meeting.
+
+| Argument | Type | Description |
+|---|---|---|
+| `enabled` | `boolean` | `true` to enable the lobby, `false` to disable it |
+
+```js
+api.executeCommand('toggleLobby', true);
+```
+
+---
+
+**`password(password)`** — Set or clear the room password. Pass an empty string to remove the password.
+
+```js
+api.executeCommand('password', 'my-secret-pass');
+```
+
+---
+
+**`subject(subject)`** — Set the meeting subject (title) displayed in the toolbar.
+
+```js
+api.executeCommand('subject', 'Q3 Planning Session');
+```
+
+---
+
+**`displayName(name)`** — Set the local participant's display name.
+
+```js
+api.executeCommand('displayName', 'Alice Smith');
+```
+
+---
+
+**`email(email)`** — Set the local participant's email address.
+
+```js
+api.executeCommand('email', 'alice@example.com');
+```
+
+---
+
+**`avatarUrl(url)`** — Set the local participant's avatar image URL.
+
+```js
+api.executeCommand('avatarUrl', 'https://example.com/avatar.png');
+```
+
+---
+
+**`sendTones(options)`** — Send DTMF tones (useful for phone dial-in scenarios).
+
+```js
+api.executeCommand('sendTones', { tones: '1234#', duration: 200, pause: 200 });
+```
+
+</Accordion>
+
+<Accordion title="Recording and Streaming">
+
+**`startRecording(options)`** — Start a file recording or live stream. The `mode` field determines the recording type.
+
+| Option | Type | Description |
+|---|---|---|
+| `mode` | `string` | `'file'` for server recording, `'stream'` for live streaming |
+| `dropboxToken` | `string` | OAuth2 token for Dropbox recording |
+| `shouldShare` | `boolean` | Whether to share the recording link with participants |
+| `rtmpStreamKey` | `string` | RTMP stream key for live streaming |
+| `rtmpBroadcastID` | `string` | Optional RTMP broadcast ID |
+| `youtubeStreamKey` | `string` | YouTube stream key |
+| `youtubeBroadcastID` | `string` | Optional YouTube broadcast ID |
+
+```js
+// Start server-side file recording
+api.executeCommand('startRecording', { mode: 'file' });
+
+// Stream to YouTube
+api.executeCommand('startRecording', {
+  mode: 'stream',
+  youtubeStreamKey: 'xxxx-xxxx-xxxx-xxxx'
+});
+```
+
+---
+
+**`stopRecording(mode)`** — Stop an active recording or stream.
+
+```js
+api.executeCommand('stopRecording', 'file');
+api.executeCommand('stopRecording', 'stream');
+```
+
+---
+
+**`startLocalVideoRecording`** — Start recording directly in the browser without server involvement. No arguments.
+
+```js
+api.executeCommand('startLocalVideoRecording');
+```
+
+---
+
+**`stopLocalVideoRecording`** — Stop the local browser recording and prompt the file download. No arguments.
+
+```js
+api.executeCommand('stopLocalVideoRecording');
+```
+
+</Accordion>
+
+<Accordion title="Participant Management">
+
+**`kickParticipant(participantId)`** — Remove a participant from the conference. Requires moderator privileges.
+
+```js
+api.executeCommand('kickParticipant', 'participant-jid-here');
+```
+
+---
+
+**`muteRemoteParticipant(participantId, mediaType)`** — Mute a specific participant.
+
+```js
+api.executeCommand('muteRemoteParticipant', 'participant-jid-here', 'audio');
+```
+
+---
+
+**`grantModerator(participantId)`** — Grant moderator role to a participant.
+
+```js
+api.executeCommand('grantModerator', 'participant-jid-here');
+```
+
+---
+
+**`toggleRaiseHand`** — Toggle the local participant's raised-hand status. No arguments.
+
+```js
+api.executeCommand('toggleRaiseHand');
+```
+
+---
+
+**`overwriteNames(participants)`** — Override the display names of one or more participants. Accepts an array of `{ id, name }` objects.
+
+```js
+api.executeCommand('overwriteNames', [
+  { id: 'participant-jid-1', name: 'External User 1' },
+  { id: 'participant-jid-2', name: 'External User 2' }
+]);
+```
+
+---
+
+**`pinParticipant(participantId, videoType?)`** — Pin a participant to the large video stage.
+
+```js
+api.executeCommand('pinParticipant', 'participant-jid-here', 'camera');
+```
+
+---
+
+**`setParticipantVolume(participantId, volume)`** — Set the playback volume for a remote participant. Volume is a number from `0` (silent) to `1` (full).
+
+```js
+api.executeCommand('setParticipantVolume', 'participant-jid-here', 0.5);
+```
+
+---
+
+**`askToUnmute(participantId)`** — Send an unmute request to a participant.
+
+```js
+api.executeCommand('askToUnmute', 'participant-jid-here');
+```
+
+</Accordion>
+
+<Accordion title="Breakout Rooms">
+
+**`addBreakoutRoom(name)`** — Create a new breakout room with the given name. Requires moderator privileges.
+
+```js
+api.executeCommand('addBreakoutRoom', 'Team Alpha');
+```
+
+---
+
+**`removeBreakoutRoom(roomJid)`** — Remove an existing breakout room by its JID.
+
+```js
+api.executeCommand('removeBreakoutRoom', 'room-jid-here');
+```
+
+---
+
+**`autoAssignToBreakoutRooms`** — Automatically distribute participants evenly across all breakout rooms. No arguments.
+
+```js
+api.executeCommand('autoAssignToBreakoutRooms');
+```
+
+---
+
+**`sendParticipantToRoom(participantId, roomId)`** — Move a specific participant into a breakout room.
+
+```js
+api.executeCommand('sendParticipantToRoom', 'participant-jid', 'room-jid');
+```
+
+---
+
+**`joinBreakoutRoom(roomId)`** — Move the local participant into a breakout room.
+
+```js
+api.executeCommand('joinBreakoutRoom', 'room-jid-here');
+```
+
+---
+
+**`closeBreakoutRoom(roomId)`** — Close a breakout room and return its participants to the main room.
+
+```js
+api.executeCommand('closeBreakoutRoom', 'room-jid-here');
+```
+
+</Accordion>
+
+<Accordion title="User Interface">
+
+**`toggleChat`** — Show or hide the chat panel. No arguments.
+
+```js
+api.executeCommand('toggleChat');
+```
+
+---
+
+**`toggleTileView`** — Switch between tile (grid) view and stage view. No arguments.
+
+```js
+api.executeCommand('toggleTileView');
+```
+
+---
+
+**`setTileView(enabled)`** — Explicitly set tile view on or off.
+
+```js
+api.executeCommand('setTileView', true);
+```
+
+---
+
+**`toggleWhiteboard`** — Show or hide the collaborative whiteboard. No arguments.
+
+```js
+api.executeCommand('toggleWhiteboard');
+```
+
+---
+
+**`toggleFilmStrip`** — Show or hide the filmstrip (thumbnail strip). No arguments.
+
+```js
+api.executeCommand('toggleFilmStrip');
+```
+
+---
+
+**`toggleParticipantsPane`** — Show or hide the participants list panel. No arguments.
+
+```js
+api.executeCommand('toggleParticipantsPane');
+```
+
+---
+
+**`showNotification(uid, type, subject, description)`** — Display a custom in-meeting notification banner.
+
+```js
+api.executeCommand('showNotification', 'my-notif-1', 'info', 'Update available', 'Please refresh.');
+```
+
+---
+
+**`hideNotification(uid)`** — Dismiss a notification by its unique ID.
+
+```js
+api.executeCommand('hideNotification', 'my-notif-1');
+```
+
+---
+
+**`setVirtualBackground(enabled, backgroundImage)`** — Enable a virtual background using a base64-encoded image.
+
+```js
+api.executeCommand('setVirtualBackground', true, 'data:image/jpeg;base64,...');
+```
+
+---
+
+**`toggleVirtualBackgroundDialog`** — Open or close the virtual background picker. No arguments.
+
+```js
+api.executeCommand('toggleVirtualBackgroundDialog');
+```
+
+---
+
+**`setLargeVideoParticipant(participantId, videoType?)`** — Force a specific participant onto the large video stage.
+
+```js
+api.executeCommand('setLargeVideoParticipant', 'participant-jid', 'camera');
+```
+
+---
+
+**`toggleCamera`** — Switch between the front and back cameras on mobile devices. No arguments.
+
+```js
+api.executeCommand('toggleCamera');
+```
+
+---
+
+**`toggleCameraMirror`** — Mirror or un-mirror the local camera preview. No arguments.
+
+```js
+api.executeCommand('toggleCameraMirror');
+```
+
+---
+
+**`setFollowMe(enabled)`** — Enable or disable Follow Me mode (moderator view control).
+
+```js
+api.executeCommand('setFollowMe', true);
+```
+
+---
+
+**`setMeetingTimer(seconds)`** — Set a countdown timer visible to all participants.
+
+```js
+api.executeCommand('setMeetingTimer', 300); // 5 minutes
+```
+
+</Accordion>
+
+<Accordion title="End-to-End Encryption">
+
+**`toggleE2EE(enabled)`** — Enable or disable End-to-End Encryption for the meeting.
+
+```js
+api.executeCommand('toggleE2EE', true);
+```
+
+---
+
+**`setMediaEncryptionKey(keyInfo)`** — Set a custom E2EE encryption key. The key object must contain the exported raw key bytes and an index.
+
+```js
+// Using the high-level API wrapper (handles key export automatically)
+await api.setMediaEncryptionKey({ key: cryptoKey, index: 0 });
+
+// Using executeCommand directly with a pre-exported key
+api.executeCommand('setMediaEncryptionKey', JSON.stringify({
+  exportedKey: [/* byte array */],
+  index: 0
+}));
+```
+
+</Accordion>
+
+<Accordion title="Chat and Messaging">
+
+**`sendChatMessage(message, to?)`** — Send a message to the public chat, or a private message to a specific participant.
+
+| Argument | Type | Description |
+|---|---|---|
+| `message` | `string` | The text content of the message |
+| `to` | `string` (optional) | Participant ID for a private message. Omit for public. |
+
+```js
+// Public message
+api.executeCommand('sendChatMessage', 'Hello everyone!');
+
+// Private message
+api.executeCommand('sendChatMessage', 'Can you hear me?', 'participant-jid');
+```
+
+---
+
+**`sendEndpointTextMessage(to, message)`** — Send a raw data channel message directly to a specific participant. Useful for custom application-layer signalling.
+
+```js
+api.executeCommand('sendEndpointTextMessage', 'participant-jid', JSON.stringify({ action: 'ping' }));
+```
+
+</Accordion>
+
+<Accordion title="Network and Performance">
+
+**`setAssumedBandwidthBps(bps)`** — Override the bandwidth estimate used by the video quality manager. Useful when you know the user's network conditions ahead of time.
+
+```js
+// Assume 1 Mbps uplink
+api.executeCommand('setAssumedBandwidthBps', 1_000_000);
+```
+
+---
+
+**`overwriteConfig(config)`** — Overwrite `config.js` options after the meeting has started.
+
+```js
+api.executeCommand('overwriteConfig', {
+  startWithAudioMuted: true,
+  disableDeepLinking: true
+});
+```
+
+</Accordion>
+
+## Practical Multi-Command Example
+
+The following example demonstrates a real-world flow: joining a meeting, switching to tile view after the conference is joined, and then hanging up on a button click.
+
+```js
+const api = new JitsiMeetExternalAPI('meet.jit.si', {
+  roomName: 'TeamStandup',
+  width: '100%',
+  height: 600,
+  parentNode: document.getElementById('meet-container'),
+  configOverwrite: {
+    startWithAudioMuted: true
+  }
+});
+
+// Switch to tile view as soon as we join
+api.addEventListener('videoConferenceJoined', () => {
+  api.executeCommand('setTileView', true);
+  api.executeCommand('subject', 'Daily Standup');
+});
+
+// Hang up when the user clicks the Leave button
+document.getElementById('leave-btn').addEventListener('click', () => {
+  api.executeCommand('hangup');
+});
+
+// Clean up after the conference ends
+api.addEventListener('readyToClose', () => {
+  api.dispose();
+  document.getElementById('meet-container').innerHTML = '<p>Meeting ended.</p>';
+});
+```

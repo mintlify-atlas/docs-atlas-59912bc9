@@ -1,0 +1,163 @@
+---
+title: "JitsiMeeting Component Props and Ref API Reference"
+sidebarTitle: "Reference"
+description: "Full API reference for JitsiMeeting's IAppProps, the JitsiRefProps imperative ref methods, and all IEventListeners callback signatures."
+---
+
+Complete reference for the `JitsiMeeting` component props (`IAppProps`), the imperative ref API (`JitsiRefProps`), and the event listener callbacks (`IEventListeners`). All types are exported directly from `@jitsi/react-native-sdk` and are written in TypeScript.
+
+## IAppProps — Component Props
+
+These are the props accepted by the `<JitsiMeeting />` component. Only `room` is required; all other props are optional.
+
+<ParamField path="room" type="string" required>
+  The conference room to join. Accepts either a plain room name (e.g. `"MyRoom"`) or a fully-qualified URL (e.g. `"https://meet.jit.si/MyRoom"`). When a full URL is provided, the `serverURL` prop is ignored.
+</ParamField>
+
+<ParamField path="serverURL" type="string">
+  The base URL of the Jitsi Meet server to connect to, including the protocol (e.g. `"https://meet.jit.si"`). If omitted, the SDK defaults to the public `meet.jit.si` server. Has no effect when `room` contains a full URL.
+</ParamField>
+
+<ParamField path="config" type="object">
+  An object of `config.js` overrides applied to the conference at join time. Use this to pre-configure conference behaviour — for example, `{ startWithAudioMuted: true }` or `{ customToolbarButtons: [...] }`. See the [Jitsi Meet config.js documentation](https://jitsi.github.io/handbook/docs/user-guide/user-guide-advanced) for all available keys.
+</ParamField>
+
+<ParamField path="flags" type="object">
+  Feature flags that enable or disable specific conference features. Passed directly into the embedded app as `rnSdkHandlers.flags`. Consult the Jitsi Meet feature flags reference for the full list of supported keys and their default values.
+</ParamField>
+
+<ParamField path="token" type="string">
+  A signed JWT authentication token used to authenticate the local user against your Jitsi server. Required when your server enforces token authentication. The token is passed to the conference URL as the `jwt` query parameter internally.
+</ParamField>
+
+<ParamField path="userInfo" type="IUserInfo">
+  An object describing the local participant's identity. See the [IUserInfo type](#iuserinfo-type) section below for the shape. When provided, this overrides whatever display name and avatar the server would otherwise assign.
+
+  ```ts
+  userInfo={{
+    displayName: 'Alice',
+    email: 'alice@example.com',
+    avatarURL: 'https://example.com/avatars/alice.png'
+  }}
+  ```
+</ParamField>
+
+<ParamField path="eventListeners" type="IEventListeners">
+  An object of optional callback functions that receive conference lifecycle and state-change events. All callbacks are optional — provide only the events you care about. See the [IEventListeners](#ieventlisteners-event-callbacks) section for the full list.
+</ParamField>
+
+<ParamField path="style" type="object">
+  A React Native `ViewStyle` object applied to the outer container `View` that wraps the conference. Use `{ flex: 1 }` to fill the available space, or provide explicit `width` and `height` values. The conference will not render visibly without defined dimensions.
+</ParamField>
+
+---
+
+## JitsiRefProps — Imperative Ref API
+
+Attach a `ref` typed as `React.RefObject<JitsiRefProps>` to `<JitsiMeeting />` to access these imperative methods. They dispatch Redux actions into the conference's internal store and take effect immediately on the running conference.
+
+<ParamField path="close" type="() => void">
+  Navigates away from the active conference, ending it for the local participant. Equivalent to pressing the hang-up button in the UI. The component does not unmount itself — you are responsible for removing it from your component tree after calling `close()` (listen for `onReadyToClose` to know when it is safe to do so).
+</ParamField>
+
+<ParamField path="setAudioMuted" type="(muted: boolean) => void">
+  Mutes (`true`) or unmutes (`false`) the local participant's microphone. Triggers an `onAudioMutedChanged` event after the state changes. Has no effect if called before the conference is joined.
+</ParamField>
+
+<ParamField path="setVideoMuted" type="(muted: boolean) => void">
+  Disables (`true`) or enables (`false`) the local participant's camera. Triggers an `onVideoMutedChanged` event after the state changes. Has no effect if called before the conference is joined.
+</ParamField>
+
+<ParamField path="setAudioOnly" type="(value: boolean) => void">
+  Enables (`true`) or disables (`false`) audio-only mode. In audio-only mode, no video is sent or received, reducing bandwidth usage significantly. Useful for low-connectivity scenarios.
+</ParamField>
+
+<ParamField path="getRoomsInfo" type="() => IRoomsInfo">
+  Returns a snapshot of the current breakout room state, including the list of all rooms, their names, and the participants assigned to each. The return type is `IRoomsInfo` from `react/features/breakout-rooms/types`. Returns the current Redux state synchronously.
+</ParamField>
+
+---
+
+## IEventListeners — Event Callbacks
+
+All properties of `IEventListeners` are optional functions. Pass only the events you need to handle in the `eventListeners` prop. Callbacks are registered before the conference joins and remain active for the lifetime of the component.
+
+<ParamField path="onConferenceJoined" type="() => void">
+  Fired when the local user has successfully joined the conference. This is the earliest point at which ref methods such as `setAudioMuted` are safe to call.
+</ParamField>
+
+<ParamField path="onConferenceLeft" type="() => void">
+  Fired when the local user has fully left the conference — either by calling `close()`, pressing the hang-up button, or being removed by a moderator. Typically followed by `onReadyToClose`.
+</ParamField>
+
+<ParamField path="onConferenceWillJoin" type="() => void">
+  Fired just before the local user joins the conference, after the connection is established but before the join completes. Use this to show a pre-join loading indicator.
+</ParamField>
+
+<ParamField path="onConferenceBlurred" type="() => void">
+  Fired when the conference screen loses focus — for example, when the user navigates to another screen within the SDK's internal navigation stack (such as the chat panel or settings). Use this to pause any overlay UI in your host app.
+</ParamField>
+
+<ParamField path="onConferenceFocused" type="() => void">
+  Fired when the conference screen regains focus after previously being blurred. Pair with `onConferenceBlurred` to manage host-app overlays.
+</ParamField>
+
+<ParamField path="onAudioMutedChanged" type="({ muted: boolean }) => void">
+  Fired whenever the local participant's audio mute state changes — whether triggered programmatically via `setAudioMuted()` or by the user pressing the mute button in the UI.
+
+  ```ts
+  onAudioMutedChanged: ({ muted }) => {
+    setLocalAudioMuted(muted); // sync your own UI state
+  }
+  ```
+</ParamField>
+
+<ParamField path="onVideoMutedChanged" type="({ muted: boolean }) => void">
+  Fired whenever the local participant's video mute state changes — whether triggered programmatically via `setVideoMuted()` or by the user pressing the camera button in the UI.
+</ParamField>
+
+<ParamField path="onParticipantJoined" type="({ id: string }) => void">
+  Fired when a remote participant joins the conference. The `id` field is the participant's unique endpoint ID within the conference session.
+</ParamField>
+
+<ParamField path="onParticipantLeft" type="({ id: string }) => void">
+  Fired when a remote participant leaves the conference. The `id` field matches the one provided in `onParticipantJoined`.
+</ParamField>
+
+<ParamField path="onEnterPictureInPicture" type="() => void">
+  Fired when the conference enters Picture-in-Picture mode. Use this to adjust your app's layout to accommodate the floating PiP window.
+</ParamField>
+
+<ParamField path="onEndpointMessageReceived" type="(message: any) => void">
+  Fired when a data channel message is received from a remote endpoint. The `message` payload shape depends on what the sender transmitted. Used for custom in-conference messaging between participants.
+</ParamField>
+
+<ParamField path="onReadyToClose" type="() => void">
+  Fired when the SDK has finished its teardown sequence and the `JitsiMeeting` component is safe to unmount. Listen for this event to remove the component from your render tree cleanly without risking resource leaks.
+
+  ```ts
+  onReadyToClose: () => {
+    navigation.goBack(); // safe to unmount now
+  }
+  ```
+</ParamField>
+
+---
+
+## IUserInfo Type
+
+The `userInfo` prop accepts an object with the following shape. All three fields are strings and all are technically required by the TypeScript interface, though the SDK will fall back to server-side defaults for any that are empty.
+
+| Field | Type | Description |
+|---|---|---|
+| `displayName` | `string` | The display name shown to other participants in the conference UI. |
+| `email` | `string` | The participant's email address. Used to fetch a Gravatar avatar if `avatarURL` is empty. |
+| `avatarURL` | `string` | A fully-qualified URL to the participant's avatar image. Pass an empty string `""` to fall back to the email-based Gravatar. |
+
+```ts
+userInfo: IUserInfo = {
+  displayName: 'Alice Smith',
+  email: 'alice@example.com',
+  avatarURL: 'https://example.com/avatars/alice.png'
+}
+```
